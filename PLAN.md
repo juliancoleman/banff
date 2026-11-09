@@ -65,7 +65,9 @@ Widgets load shared code with `require("../lib/banff/<module>")`; modules load s
 
 **Type checking.** `scripts/check` runs `luau-lsp analyze` in non-strict mode against `omniwm.d.luau`. That catches syntax errors, unresolved requires and lint findings, but not wrong prop types. Strict mode is unusable against the v0.8.0 definitions: string literals passed to `ui.*` widen to `string`, so every `weight`/`style` value reports a false error. The official styles show the same errors.
 
-**Development install.** Symlink the clone to `~/.config/omniwm/shell/banff` and choose **Use Style**. OmniShell hot-reloads Luau on save; font changes need an OmniWM restart. User overrides go under `profiles.banff` in `~/.config/omniwm/shell/shell.toml`, which wins over the repo's `shell.toml`.
+**Versioning.** Bump `style.toml`'s `version` in every commit. OmniWM manages the installed copy and only offers an update when the version increases. Use the patch number for fixes and docs, and the minor number for each phase.
+
+**Development install.** Install with **Get Styles > Add from GitHub…** (OmniWM manages the installed copy), or symlink a clone to `~/.config/omniwm/shell/banff`. Then choose **Use Style**. OmniShell hot-reloads Luau on save; font changes need an OmniWM restart. User overrides go under `profiles.banff` in `~/.config/omniwm/shell/shell.toml`, which wins over the repo's `shell.toml`.
 
 ## 5. Phases
 
