@@ -2,15 +2,26 @@
 -- At rest: weather · 12-hour clock · status ring in one black housing flush with the top edge,
 -- square on top and rounded below. On a display with a camera notch the housing wraps the notch,
 -- with weather and clock to its left and status to its right. Hover reveals the date.
+-- Weather is the "weather" island component, so its location is edited in OmniWM's Island settings.
 
 local theme = require("../lib/banff/theme")
-local glyphs = require("../lib/banff/glyphs")
 local clock = require("../lib/banff/clock")
 local status = require("../lib/banff/status")
+local weather = require("../lib/banff/weather")
 
 interval = 1
 
-local TEXT = { font = theme.font, size = theme.digitSize, weight = "medium" }
+local WEATHER = "weather" -- component instance id in shell.toml
+
+-- Whether the weather instance is configured and enabled.
+local function weatherEnabled(ctx): boolean
+    for _, component in ctx.data.components or {} do
+        if component.id == WEATHER then
+            return component.enabled
+        end
+    end
+    return false
+end
 
 local function time(ctx): (number?, number?)
     local seconds = ctx.data.seconds
@@ -31,65 +42,6 @@ local function dateText(ctx): string
     return table.concat(fields, " ")
 end
 
-local function weatherIcon(name: string)
-    local size = theme.weatherIcon
-    local k = size / 24
-    local children = {
-        key = "icon",
-        w = size,
-        h = size,
-        ui.path({
-            key = "glyph",
-            w = size,
-            h = size,
-            viewBox = { 0, 0, 24, 24 },
-            d = glyphs.weather[name],
-            border = theme.colors.text,
-            borderWidth = 2 * k,
-        }),
-    }
-    for index, dot in glyphs.weatherDots[name] or {} do
-        local d = 2.4 * k
-        children[#children + 1] = ui.box({
-            key = "dot" .. index,
-            w = d,
-            h = d,
-            radius = d / 2,
-            align = "topLeading",
-            dx = dot[1] * k - d / 2,
-            dy = dot[2] * k - d / 2,
-            fill = theme.colors.text,
-        })
-    end
-    return ui.stack(children)
-end
-
--- Compact weather (Weather/WeatherCircle.qml): glyph and whole degrees without a unit.
--- Returns nil when the feed is off or not loaded.
-local function weather(ctx, height: number)
-    local w = ctx.data.weather
-    if w == nil or w.access ~= "ok" then
-        return nil, 0
-    end
-    local temp = if w.status == "stale" then "–" else tostring(math.round(w.temp))
-    local textWidth = math.ceil((ctx.format.measure(temp, TEXT)))
-    local inset = theme.weatherInset
-    local width = 2 * inset + theme.weatherIcon + theme.weatherIconGap + textWidth
-    return ui.row({
-        key = "weather",
-        w = width,
-        h = height,
-        gap = 0,
-        help = w.condition,
-        ui.box({ w = inset, h = 1 }),
-        weatherIcon(glyphs.weatherGlyph(w.code, w.day)),
-        ui.box({ w = theme.weatherIconGap, h = 1 }),
-        ui.text({ key = "temp", text = temp, font = theme.font, size = theme.digitSize, weight = "medium",
-            color = theme.colors.text }),
-        ui.box({ w = inset, h = 1 }),
-    }), width
-end
-
 function render(ctx)
     local island = ctx.data.island
     if island == nil then
@@ -102,9 +54,9 @@ function render(ctx)
 
     local notch = island.notch
     local height = math.max(theme.height, if notch then notch.h else 0)
-    local weatherItem, weatherWidth = weather(ctx, height)
+    local weatherWidth = if weatherEnabled(ctx) then weather.width(ctx) else nil
     local clockWidth = clock.width(m)
-    local leftWidth = (if weatherItem then weatherWidth + theme.gap else 0) + clockWidth
+    local leftWidth = (if weatherWidth then weatherWidth + theme.gap else 0) + clockWidth
     local rightWidth = theme.status
 
     -- Housing origin and width in envelope coordinates; group origins relative to the housing.
@@ -125,8 +77,8 @@ function render(ctx)
     local radius = theme.height / 2
 
     local left = { key = "left", h = height, gap = 0, align = "topLeading", dx = leftX, dy = 0, animate = theme.spring }
-    if weatherItem then
-        left[#left + 1] = weatherItem
+    if weatherWidth then
+        left[#left + 1] = ui.component({ key = WEATHER, id = WEATHER, view = "compact", w = weatherWidth, h = height })
         left[#left + 1] = ui.box({ key = "weatherGap", w = theme.gap, h = 1 })
     end
     local hour, minute = time(ctx)

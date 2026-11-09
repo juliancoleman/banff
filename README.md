@@ -14,7 +14,7 @@ Draws a Dynamic Island on the main display. The island is one black housing flus
 
 - the current weather glyph and whole degrees
 - the time as 12-hour `hh:mm` with a dimmed leading zero, whose digits roll when they change
-- a status circle: a battery ring that fills from the top down both sides (green while charging, red at 20 % or below) around a Wi-Fi signal glyph
+- a status circle: a battery ring that fills from the top down both sides (green while charging or plugged in below the charge limit, red at 20 % or below) around a Wi-Fi signal glyph
 
 On a display with a camera notch, the housing wraps the notch, with weather and clock on its left and status on its right. Hovering the housing shows the date.
 
@@ -23,13 +23,7 @@ The style puts nothing on the Workspace Bar.
 ## Controls and commands
 
 - **Settings > Styles & Widgets**: choose **Banff**, then **Use Style**. Open **Island** and turn on **Show Dynamic Island**. Turn the Workspace Bar off.
-- Weather needs a location in `~/.config/omniwm/shell/shell.toml`:
-
-  ```toml
-  [weather]
-  city = "Denver"  # or latitude = …, longitude = …
-  units = "fahrenheit"
-  ```
+- Weather location: **Settings > Styles & Widgets > Island**, select the **Weather** component, and set the city or coordinates and units in its location editor. Its **Enabled** switch shows or hides the weather.
 
 - IBM Plex Sans ships in `fonts/`; restart OmniWM once after installing so it loads.
 

@@ -9,3 +9,7 @@ displays = "main"
 width = 440
 height = 80
 fullscreen = "hide"
+
+[[island.components]]
+id = "weather"
+widget = "weather"

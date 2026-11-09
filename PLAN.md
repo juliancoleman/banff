@@ -17,7 +17,9 @@ Status: phase 1 (resting housing) is written; it has not yet run on the Mac. The
 | Providers / IPC | None. The style is pure Luau |
 | API churn | Accepted risk. Track stable OmniWM releases and fix breakage as it appears |
 
-**Weather source.** macOS has no public weather API for local apps. WeatherKit requires a paid Apple Developer membership and an app signed with the WeatherKit entitlement. The closest thing to "from the system" is OmniWM's own feed, fetched by the signed host (from Open-Meteo upstream), with location in the user shell file's `[weather]` table. NWS alerts are dropped because they would need our code to call `api.weather.gov`.
+**Weather source.** macOS has no public weather API for local apps. WeatherKit requires a paid Apple Developer membership and an app signed with the WeatherKit entitlement. The closest thing to "from the system" is OmniWM's own feed, fetched by the signed host (from Open-Meteo upstream). NWS alerts are dropped because they would need our code to call `api.weather.gov`.
+
+**Weather settings surface.** OmniWM's Settings shows its weather location editor only for a bar widget or island component named `weather`, `calendar` or `control-center` (`ShellIslandInspectors.swift`, `ShellDesktopWidgetInspector.swift`). So the housing's weather is an island component, `widgets/weather/` (instance `weather` in `shell.toml`), which the root mounts with `ui.component`. Its Enabled switch hides the weather. Lake uses the same component name.
 
 ## 2. Resting appearance (phase 1)
 
@@ -28,8 +30,8 @@ Measured from `~/dotfiles/qs` and a screenshot of the live bar.
 | Housing | `ClockWidget.qml`: `Theme.surface` black, flush with the top edge, square top, round bottom, 27 pt tall, 6 pt end pads, 10 pt between parts; `ClockBar.qml` shadow black 0.45, offset 4 | `widgets/banff/init.luau`: a capsule plus a top-half box (`radius` is uniform), shadow on the capsule. With a camera notch the housing wraps it: weather and clock to the left, status to the right, height = notch height |
 | Clock | `HorizontalFace.qml`, `DigitTicker.qml`: IBM Plex Sans Medium 13, 12-hour `hh:mm`, no meridiem, leading hour zero in pencil `#AEB5B9`, digits roll 250 ms OutBack | `lib/banff/clock.luau`: fixed-width digit cells with clipped 0–9 strips (the pattern from Lake's `digits.luau`), spring `{0.25, 0.2}`. 12-hour is fixed for now |
 | Date on hover | `MonthHeader.qml`: "Mon Nov 9 2026", 10 pt pencil, below the time | Hover grows the housing 18 pt and shows the date under the clock |
-| Weather | `WeatherCircle.qml`: 14 pt Lucide glyph, 5 pt gap, whole degrees without a unit; `WeatherService.glyphForCode` | `lib/banff/glyphs.luau`: the same Lucide paths and WMO-code mapping, with night variants from `weather.day`. Hidden when the feed is off; "–" when stale |
-| Status ring | `StatusIndicator.qml`, `StatusArc.qml`: 27 pt circle, 19 pt ring, 1.9 pt stroke, battery arc filling from 12 o'clock down both sides; paper, charging `#7E9C88`, ≤ 20 % `#7A2536`; Wi-Fi glyph with 25/50/75 % bands and 4-point hysteresis | `lib/banff/status.luau`: the same arc geometry as an SVG path; RSSI mapped to quality as `2·(rssi+100)` %. OmniShell strokes with butt caps, so the Wi-Fi dot is a circle |
+| Weather | `WeatherCircle.qml`: 14 pt Lucide glyph, 5 pt gap, whole degrees without a unit; `WeatherService.glyphForCode` | `lib/banff/weather.luau` + `glyphs.luau`: the same Lucide paths and WMO-code mapping, with night variants from `weather.day`, drawn by the `weather` component. Hidden when the feed is off or the component is disabled; "–" when stale |
+| Status ring | `StatusIndicator.qml`, `StatusArc.qml`: 27 pt circle, 19 pt ring, 1.9 pt stroke, battery arc filling from 12 o'clock down both sides; paper, charging `#7E9C88` (UPower Charging or PendingCharge), ≤ 20 % `#7A2536`; Wi-Fi glyph with 25/50/75 % bands and 4-point hysteresis | `lib/banff/status.luau`: the same arc geometry as an SVG path. "On AC and not `power.charged`" stands in for PendingCharge, since macOS reports a battery held at its charge limit as not charging `[INFERENCE: what `charged` reports at the limit]`. RSSI mapped to quality as `2·(rssi+100)` %. OmniShell strokes with butt caps, so the Wi-Fi dot is a circle |
 | Palette | `Common/Theme.qml` "pens" set (the config's `theme.palette` hex values are not read by the live shell) | `themes/banff.toml` roles + `lib/banff/theme.luau` colours without a role |
 | Font | IBM Plex Sans | `fonts/` Regular, Medium, SemiBold (OFL); fonts load after an OmniWM restart |
 
@@ -76,7 +78,7 @@ Every phase ends with a live check on the MacBook.
 0. **Spike.** Done, results:
    - The symlinked profile loads.
    - The Workspace Bar stayed at the top despite `position = "right"`, and the custom bar widgets (workspaces, hover test) did not render. Neither was investigated: workspaces were dropped and the bar is no longer used.
-1. **Resting housing.** Section 2. Accept: on the main display the housing matches the qs screenshot (shape, spacing, fonts, colours, shadow), the clock rolls on the minute, the battery ring and Wi-Fi bands track the system, weather shows after `[weather]` is set, hover shows the date, and clicks on the menu bar outside the housing still work.
+1. **Resting housing.** Section 2. Accept: on the main display the housing matches the qs screenshot (shape, spacing, fonts, colours, shadow), the clock rolls on the minute, the battery ring and Wi-Fi bands track the system, weather shows once its location is set in the Island settings, hover shows the date, and clicks on the menu bar outside the housing still work. Confirmed so far: housing, date on hover, clock roll, ring, Wi-Fi glyph, menu-bar clicks.
 2. **Calendar.**
 3. **Notifications circle + panel.**
 4. **Status temporary states.**
@@ -96,5 +98,5 @@ Every phase ends with a live check on the MacBook.
 
 - Apple Silicon MacBook, macOS 26+, OmniWM ≥ 0.8.0, Raycast bound to the launcher hotkey.
 - Permissions granted to OmniWM: Full Disk Access (granted), Accessibility (dismiss/reply), Location (Wi-Fi SSID), Bluetooth, optionally Calendars.
-- `[weather]` in `~/.config/omniwm/shell/shell.toml`.
+- Weather location set on the Island's Weather component.
 - `luau-lsp` for `scripts/check` (on Linux: `nix shell nixpkgs#luau-lsp`).

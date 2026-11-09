@@ -16,5 +16,13 @@ if [ ! -f "$defs" ]; then
 fi
 
 cd "$root"
-find lib widgets -name '*.luau' -exec luau-lsp analyze --no-flags-enabled --platform standard \
-    --definitions=@omniwm="$defs" {} +
+# OmniShell resolves require("../lib/...") from the shell folder or profile, not relative to the file.
+# For init.luau that matches Luau's own rule; for component.luau luau-lsp looks in widgets/lib and
+# reports an unknown require, so those lines are dropped.
+output=$(find lib widgets -name '*.luau' -exec luau-lsp analyze --no-flags-enabled --platform standard \
+    --definitions=@omniwm="$defs" {} + 2>&1) || true
+output=$(printf '%s\n' "$output" | grep -v 'component\.luau([0-9,]*): TypeError: Unknown require: .*/widgets/lib/' || true)
+printf '%s\n' "$output"
+if printf '%s\n' "$output" | grep -q 'Error'; then
+    exit 1
+fi

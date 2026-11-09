@@ -40,8 +40,11 @@ local function wifiLevel(rssi: number?, previous: number?): number
     return level
 end
 
-local function ringColor(battery: number, charging: boolean): string
-    if charging then
+-- qs counts UPower's Charging and PendingCharge as charging. macOS reports a battery held below its
+-- charge limit on AC as not charging, so "on AC and not fully charged" stands in for PendingCharge.
+local function ringColor(battery: number, charging: boolean, power): string
+    local pending = power ~= nil and power.source == "ac" and not power.charged
+    if charging or pending then
         return theme.colors.charging
     elseif battery <= 20 then
         return theme.colors.dangerMark
@@ -124,7 +127,7 @@ local function render(data, state)
             h = ring,
             viewBox = { 0, 0, ring, ring },
             d = fill,
-            border = ringColor(battery :: number, data.charging),
+            border = ringColor(battery :: number, data.charging, data.power),
             borderWidth = stroke,
             animate = theme.fade,
         })
