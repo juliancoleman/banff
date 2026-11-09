@@ -175,21 +175,24 @@ function render(ctx)
         }),
     }
     if hovered then
-        local text = dateText(ctx)
-        local dateWidth = math.ceil((ctx.format.measure(text, { font = theme.font, size = theme.dateSize, weight = "medium" })))
-        local clockX = leftX + leftWidth - clockWidth
-        housing[#housing + 1] = ui.text({
+        -- A row as wide as the housing centres the date; positioning the text itself by measured
+        -- width put it off the housing's left edge on the Mac.
+        housing[#housing + 1] = ui.box({
             key = "date",
-            text = text,
-            font = theme.font,
-            size = theme.dateSize,
-            weight = "medium",
-            color = theme.colors.textSecondary,
+            w = width,
+            h = theme.dateRow,
             align = "topLeading",
-            dx = clockX + clockWidth / 2 - dateWidth / 2,
+            dx = 0,
             dy = height - 1,
             appear = { opacity = 0, dy = -4, animate = theme.spring },
             exit = { opacity = 0, animate = theme.fade },
+            ui.text({
+                text = dateText(ctx),
+                font = theme.font,
+                size = theme.dateSize,
+                weight = "medium",
+                color = theme.colors.textSecondary,
+            }),
         })
     end
 
