@@ -3,7 +3,9 @@
 -- square on top and rounded below. On a display with a camera notch the housing wraps the notch,
 -- with weather and clock to its left and status to its right. Hover reveals the date.
 -- Weather is the "weather" island component, so its location is edited in OmniWM's Island settings.
+-- Clicking the housing opens the qs month calendar inside it (lib/banff/calendar.luau).
 
+local calendar = require("../lib/banff/calendar")
 local theme = require("../lib/banff/theme")
 local clock = require("../lib/banff/clock")
 local status = require("../lib/banff/status")
@@ -48,6 +50,42 @@ local function dateText(ctx): string
     return table.concat(fields, " ")
 end
 
+-- Today's date from the seconds feed.
+local function today(ctx)
+    local seconds = ctx.data.seconds
+    local year = tonumber(ctx.format.date(seconds, "yyyy") or "")
+    local month = tonumber(ctx.format.date(seconds, "M") or "")
+    local day = tonumber(ctx.format.date(seconds, "d") or "")
+    if year == nil or month == nil or day == nil then
+        return nil
+    end
+    return { year = year, month = month, day = day }
+end
+
+-- Opening resets the calendar to the current month (qs ClockWidget.toggleCalendar).
+local function toggleCalendar(ctx)
+    local state = ctx.state
+    if state.calendarOpen then
+        state.calendarOpen = false
+        return
+    end
+    local now = today(ctx)
+    if now == nil then
+        return
+    end
+    state.calendarOpen = true
+    state.viewYear, state.viewMonth, state.direction = now.year, now.month, 0
+end
+
+local function shiftMonth(ctx, delta: number)
+    local state = ctx.state
+    if not state.calendarOpen then
+        return
+    end
+    state.viewYear, state.viewMonth = calendar.shift(state.viewYear, state.viewMonth, delta)
+    state.direction = delta
+end
+
 function render(ctx)
     local island = ctx.data.island
     if island == nil then
@@ -56,7 +94,8 @@ function render(ctx)
     local state = ctx.state
     state.metrics = state.metrics or clock.metrics(ctx)
     local m = state.metrics
-    local hovered = state.hovered == true
+    local open = state.calendarOpen == true
+    local hovered = state.hovered == true and not open
 
     local notch = island.notch
     local height = math.max(theme.height, if notch then notch.h else 0)
@@ -65,24 +104,43 @@ function render(ctx)
     local leftWidth = (if weatherWidth then weatherWidth + theme.gap else 0) + clockWidth
     local rightWidth = theme.status
 
-    -- Housing origin and width in envelope coordinates; group origins relative to the housing.
-    local x, width, leftX, rightX
+    -- The resting row in envelope coordinates: where the left group starts, where status starts,
+    -- and the centre an open panel hangs from.
+    local leftStart, rightStart, rowLeft, rowRight, centre
     if notch then
         -- Wrap the notch: weather and clock end left of it, status starts right of it.
-        x = notch.x - theme.gap - leftWidth - theme.pad
-        width = theme.pad + leftWidth + theme.gap + notch.w + theme.gap + rightWidth + theme.pad
-        leftX = theme.pad
-        rightX = notch.x + notch.w + theme.gap - x
+        leftStart = notch.x - theme.gap - leftWidth
+        rightStart = notch.x + notch.w + theme.gap
+        centre = notch.x + notch.w / 2
     else
-        width = theme.pad + leftWidth + theme.gap + rightWidth + theme.pad
-        x = (island.size.w - width) / 2
-        leftX = theme.pad
-        rightX = leftX + leftWidth + theme.gap
+        local rowWidth = leftWidth + theme.gap + rightWidth
+        leftStart = (island.size.w - rowWidth) / 2
+        rightStart = leftStart + leftWidth + theme.gap
+        centre = island.size.w / 2
     end
-    local housingHeight = height + (if hovered then theme.dateRow else 0)
+    rowLeft = leftStart - theme.pad
+    rowRight = rightStart + rightWidth + theme.pad
+
+    -- The housing spans the row, and the calendar with its gutter while open.
+    local panelWidth = calendar.width + 2 * theme.panelPad
+    local x, right = rowLeft, rowRight
+    if open then
+        x = math.min(x, centre - panelWidth / 2)
+        right = math.max(right, centre + panelWidth / 2)
+    end
+    local width = right - x
+    local housingHeight = height
+    local now = today(ctx)
+    if open then
+        local _, rows = calendar.grid(state.viewYear, state.viewMonth, nil)
+        housingHeight += calendar.height(rows) + theme.panelPad
+    elseif hovered then
+        housingHeight += theme.dateRow
+    end
     local radius = theme.height / 2
 
-    local left = { key = "left", h = height, gap = 0, align = "topLeading", dx = leftX, dy = 0, animate = theme.spring }
+    local left = { key = "left", h = height, gap = 0, align = "topLeading", dx = leftStart - x, dy = 0,
+        animate = theme.spring }
     if weatherWidth then
         left[#left + 1] = ui.component({ key = WEATHER, id = WEATHER, view = "compact", w = weatherWidth, h = height })
         left[#left + 1] = ui.box({ key = "weatherGap", w = theme.gap, h = 1 })
@@ -95,6 +153,8 @@ function render(ctx)
             weight = "medium", color = theme.colors.text })
     end
 
+    -- Any press on the housing toggles the calendar, as in qs; the arrows claim their own presses.
+    -- While open it holds keyboard focus for Left/Right/Escape and closes on an outside press.
     local housing = {
         key = "housing",
         w = width,
@@ -107,6 +167,26 @@ function render(ctx)
         onHover = function(next, event)
             next.state.hovered = event.phase == "began"
         end,
+        onClick = toggleCalendar,
+        focusable = true,
+        focusRing = false,
+        keys = { "left", "right", "escape" },
+        onKey = function(next, event)
+            if event.key == "left" then
+                shiftMonth(next, -1)
+            elseif event.key == "right" then
+                shiftMonth(next, 1)
+            elseif event.key == "escape" then
+                next.state.calendarOpen = false
+            end
+        end,
+        onOutsidePress = if open
+            then function(next, event)
+                if not event.claimed then
+                    next.state.calendarOpen = false
+                end
+            end
+            else nil,
         ui.box({
             key = "body",
             w = width,
@@ -126,7 +206,7 @@ function render(ctx)
             w = rightWidth,
             h = height,
             align = "topLeading",
-            dx = rightX,
+            dx = rightStart - x,
             dy = 0,
             animate = theme.spring,
             status.render(ctx.data, state),
@@ -154,6 +234,19 @@ function render(ctx)
                 color = theme.colors.textSecondary,
             }),
             ui.box({ grow = 1, h = 1 }),
+        })
+    end
+    if open then
+        housing[#housing + 1] = ui.stack({
+            key = "panel",
+            w = calendar.width,
+            align = "topLeading",
+            dx = centre - calendar.width / 2 - x,
+            dy = height,
+            animate = theme.spring,
+            appear = { opacity = 0, animate = theme.spring },
+            exit = { opacity = 0, animate = { duration = 0.12, curve = "easeOut" } },
+            calendar.render(state.viewYear, state.viewMonth, now, state.direction or 0, shiftMonth),
         })
     end
 

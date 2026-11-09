@@ -15,6 +15,11 @@ return {
         charging = "#7E9C88", -- green-black light
         dangerMark = "#7A2536", -- Qt.lighter(bordeaux #4C1722, 1.6)
         shadow = "#00000073", -- black at 0.45
+        rule = "#D1DBE024", -- rgba(0.82, 0.86, 0.88, 0.14)
+        lift = "#FFFFFF0D", -- hover: white at 0.05
+        press = "#FFFFFF1A", -- press: white at 0.10
+        today = "#8AA5C0", -- blue-black light
+        todayInk = "#111922",
     },
 
     -- Housing (points)
@@ -23,6 +28,7 @@ return {
     gap = 10, -- between weather, clock and status (padX + 3)
     shadowRadius = 12,
     shadowOffset = { x = 0, y = 4 },
+    panelPad = 12, -- gutter around an open panel
 
     -- Clock
     digitSize = 13,

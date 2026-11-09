@@ -1,6 +1,6 @@
 # Banff: the qs bar for macOS on OmniWM
 
-Status: phase 1 (resting housing) is written; it has not yet run on the Mac. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
+Status: phase 1 (resting housing) is done and confirmed on the Mac; phase 2 (calendar) is written and not yet run there. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
 
 ## 1. Decisions
 
@@ -41,7 +41,7 @@ Not yet ported from rest: the 1.06 hover zoom (scaling about the centre would li
 
 | qs feature | OmniShell implementation | Gap |
 |---|---|---|
-| Calendar (`Clock/MonthGrid.qml`) | Click on the clock grows the housing into a month grid inside the island envelope (`ctx.data.calendar.month` or computed) | The envelope must grow to the panel size; check transparent click-through first |
+| Calendar (`Clock/MonthGrid.qml`, `MonthHeader.qml`, `MonthArrow.qml`) | Phase 2, below | None known |
 | Notifications circle + panel | `ctx.data.notifications` (Full Disk Access granted); `notifications dismiss/dismiss-all/open`. The circle docks between weather and clock as in qs | macOS still draws its own banners |
 | Status temporary states (`StatusIndicator.qml`) | Volume, mic, media and Bluetooth feeds drive the priority and dwell timers via `omniwm.after` | None known |
 | Control center | Grows out of the status circle. Toggles via `wifi`/`bluetooth`; audio via `outputs`/`volume`/`microphone`; brightness; hardware via `cpu/memory/gpu/disk/thermal`; power via `session …` | Wi-Fi scan/join and Bluetooth pairing open System Settings `[INFERENCE]`. Fans dropped |
@@ -78,8 +78,16 @@ Every phase ends with a live check on the MacBook.
 0. **Spike.** Done, results:
    - The symlinked profile loads.
    - The Workspace Bar stayed at the top despite `position = "right"`, and the custom bar widgets (workspaces, hover test) did not render. Neither was investigated: workspaces were dropped and the bar is no longer used.
-1. **Resting housing.** Section 2. Accept: on the main display the housing matches the qs screenshot (shape, spacing, fonts, colours, shadow), the clock rolls on the minute, the battery ring and Wi-Fi bands track the system, weather shows once its location is set in the Island settings, hover shows the date, and clicks on the menu bar outside the housing still work. Confirmed so far: housing, date on hover, clock roll, ring, Wi-Fi glyph, menu-bar clicks.
-2. **Calendar.**
+1. **Resting housing.** Section 2. Done: housing, date on hover, clock roll, ring (green on AC below the charge limit), Wi-Fi glyph, weather once a location is set, and menu-bar clicks through the envelope. Wi-Fi band thresholds are not yet compared against real signal levels.
+2. **Calendar.** From the live qs (which differs from `~/code/qs/PLAN.md`: no month/year pickers, and the grid has 4–6 rows rather than a fixed six):
+   - A press anywhere on the housing toggles it; opening resets to the current month.
+   - The housing grows to fit the calendar plus its 12 pt gutter (`Theme.panelPad`), hanging from the row's centre, or the notch's centre on a notched display.
+   - Header: ‹ › arrows (28 × 22, 15 pt, hover white 0.05, press 0.10) around "November 2026" (12 pt Medium), with a hairline rule (`Theme.rule`) below.
+   - Grid: S M T W T F S (10 pt pencil), a Sunday-first 24 pt grid with 2 pt gaps and as many rows as the month needs, planner rules between weeks, and adjacent-month days in `statusDim`. Today is a 22 pt `#8AA5C0` disc with `#111922` SemiBold text.
+   - Navigation: arrows or Left/Right. Days slide 18 pt in the direction of travel and fade in from 45 % inside a mask, while the rules stay put. Changes in row count resize the housing on its spring.
+   - Escape, an outside press or another press on the housing closes it.
+
+   Code: `lib/banff/calendar.luau` (date maths, `grid`, `render`), wired into `widgets/banff/init.luau`. The island envelope grew to 440 × 280 for the tallest month. Accept: matches qs on the Mac, month navigation by mouse and keys, outside press and Escape close, and the larger envelope still passes clicks through.
 3. **Notifications circle + panel.**
 4. **Status temporary states.**
 5. **Control center.**
@@ -89,7 +97,7 @@ Every phase ends with a live check on the MacBook.
 ## 6. Risks
 
 - **API churn.** Accepted. OmniShell shipped 2026-11-07.
-- **Island click-through.** OmniWM's docs say transparent click-through "still needs a live check". The 440 × 80 envelope covers the middle of the menu bar.
+- **Island click-through.** The 440 × 80 envelope passed menu-bar clicks through. Phase 2 grows it to 440 × 280, covering the top of windows under the housing, so this needs a recheck.
 - **Notch geometry.** Untested on a notched display. The layout depends on `island.notch` being in envelope coordinates, as the docs state.
 - **Duplicate notifications** alongside macOS banners.
 - **Coarse weather alerts.** Hourly data replaces minute-level prediction.
