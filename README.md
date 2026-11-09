@@ -13,10 +13,11 @@ None yet.
 Draws a Dynamic Island on the main display. The island is one black housing flush with the top edge: square on top, rounded below, with a soft shadow. Inside, left to right:
 
 - the current weather glyph and whole degrees
+- a notification circle with a bell and a count, while Notification Center holds notifications
 - the time as 12-hour `hh:mm` with a dimmed leading zero, whose digits roll when they change
 - a status circle: a battery ring that fills from the top down both sides (green while charging or plugged in below the charge limit, red at 20 % or below) around a Wi-Fi signal glyph
 
-On a display with a camera notch, the housing wraps the notch, with weather and clock on its left and status on its right. Hovering the housing shows the date. Clicking it opens a month calendar inside the housing: ‹ › or Left/Right change the month, and Escape, a click outside or another click on the housing closes it.
+On a display with a camera notch, the housing wraps the notch, with weather, notifications and clock on its left and status on its right. Hovering the housing shows the date. Clicking it opens a month calendar inside the housing: ‹ › or Left/Right change the month, and Escape, a click outside or another click on the housing closes it. Clicking the notification circle opens the notification list instead: click a row to open its app, × to dismiss it, or Clear all. A new notification briefly peeks under the clock. Notifications need OmniWM to have Full Disk Access (to read them) and Accessibility (to dismiss them).
 
 The style puts nothing on the Workspace Bar.
 

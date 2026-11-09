@@ -7,7 +7,7 @@ trailing = []
 root = "banff"
 displays = "main"
 width = 440
-height = 280
+height = 440
 fullscreen = "hide"
 
 [[island.components]]

@@ -1,6 +1,6 @@
 # Banff: the qs bar for macOS on OmniWM
 
-Status: phases 1 (resting housing) and 2 (calendar) are done and confirmed on the Mac; phase 3 (notifications) is next. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. Where the user's stated intent differs from `~/dotfiles/qs`, the user wins, and the difference is recorded here. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
+Status: phases 1 (resting housing) and 2 (calendar) are done and confirmed on the Mac; phase 3 (notifications) is written and not yet run there. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. Where the user's stated intent differs from `~/dotfiles/qs`, the user wins, and the difference is recorded here. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
 
 ## 1. Decisions
 
@@ -42,7 +42,7 @@ Not yet ported from rest: the 1.06 hover zoom (scaling about the centre would li
 | qs feature | OmniShell implementation | Gap |
 |---|---|---|
 | Calendar (`Clock/MonthGrid.qml`, `MonthHeader.qml`, `MonthArrow.qml`) | Phase 2, below | None known |
-| Notifications circle + panel | `ctx.data.notifications` (Full Disk Access granted); `notifications dismiss/dismiss-all/open`. The circle docks between weather and clock as in qs | macOS still draws its own banners |
+| Notifications circle + panel | Phase 3, below | macOS still draws its own banners |
 | Status temporary states (`StatusIndicator.qml`) | Volume, mic, media and Bluetooth feeds drive the priority and dwell timers via `omniwm.after` | None known |
 | Control center | Grows out of the status circle. Toggles via `wifi`/`bluetooth`; audio via `outputs`/`volume`/`microphone`; brightness; hardware via `cpu/memory/gpu/disk/thermal`; power via `session …` | Wi-Fi scan/join and Bluetooth pairing open System Settings `[INFERENCE]`. Fans dropped |
 | Weather panel | `ctx.data.weather` `hours`/`days`; next-hour transitions from `hours[].rain` | No NWS alerts, no automatic location |
@@ -88,7 +88,15 @@ Every phase ends with a live check on the MacBook.
    - Escape, an outside press or another press on the housing closes it.
 
    Code: `lib/banff/calendar.luau` (date maths, `grid`, `render`), wired into `widgets/banff/init.luau`. The island envelope grew to 440 × 280 for the tallest month. Done on the Mac: appearance, mouse and keyboard navigation, closing, and click-through on windows under the larger envelope.
-3. **Notifications circle + panel.**
+3. **Notifications circle + panel.** From `~/dotfiles/qs` `Notifications/NotificationCenter.qml` and `NotificationRow.qml`, fed by `ctx.data.notifications` (OmniWM reads Notification Center's database with Full Disk Access):
+   - Circle: a 27 pt slot between weather and the time (contiguous with weather, 10 pt before the time) with a 19 pt `#14181B` disc, a 14 pt Lucide bell, and a 13 pt `#8AA5C0` count pill (9 pt SemiBold `#111922`, capped at 99+) at its top right. For 2.5 s after an arrival the disc shows the sending app's icon. While the panel is open it shows an X and no pill. It appears only while there are notifications.
+   - Arrival peek: a new notification shows its row under the time row for 5 s, restarted while hovered, unless a panel is open. An arrival means a newer newest item; the first snapshot after load only records state.
+   - Panel: a press on the circle toggles it; it replaces the calendar, and a press on the housing replaces it with the calendar. It is 298 pt wide: "Notifications" (13 pt Medium) with the count (11 pt pencil) and a Clear all button (`notifications dismiss-all`), then rows up to 330 pt tall, scrolling past that. It closes when the last notification goes, on Escape or on an outside press.
+   - Row: a 30 pt round app icon, app name (10 pt pencil), title (12 pt Medium), subtitle and body (11 pt pencil, 3 lines, then Show more/Show less in `#8AA5C0`), a 22 pt dismiss X at 55 % opacity (100 % on hover, `notifications dismiss <bundle> <id>`), rules between rows, and hover/press fills. A press opens the app (`notifications open <bundle>`).
+   - Status: Accessibility denial and "Close Notification Center to finish" outcomes show as a one-line note under the header.
+   - Differences from qs, all macOS-imposed: the count is Notification Center's retained list, not live daemon notifications, so items stay until dismissed or cleared; there are no notification actions or urgency (no critical ring); there are no images, so the app icon stands in; Do Not Disturb stays native (macOS Focus, which OmniWM does not expose), so there is no moon.
+
+   Code: `lib/banff/notifications.luau`, wired into `widgets/banff/init.luau` (`state.panel` is now `"calendar"`, `"notifications"` or nil, plus `state.peek`). The island envelope grew to 440 × 440 for the tallest panel.
 4. **Status temporary states.**
 5. **Control center.**
 6. **Weather panel.**
@@ -97,9 +105,9 @@ Every phase ends with a live check on the MacBook.
 ## 6. Risks
 
 - **API churn.** Accepted. OmniShell shipped 2026-11-07.
-- **Island click-through.** The 440 × 80 envelope passed menu-bar clicks through. Phase 2 grows it to 440 × 280, covering the top of windows under the housing, so this needs a recheck.
+- **Island click-through.** The 440 × 280 envelope passed clicks through to the menu bar and windows. Phase 3 grows it to 440 × 440, so it needs one more check.
 - **Notch geometry.** Untested on a notched display. The layout depends on `island.notch` being in envelope coordinates, as the docs state.
-- **Duplicate notifications** alongside macOS banners.
+- **Duplicate notifications** alongside macOS banners. Notification Center's retained list also counts items the user has already seen as banners, so the count can grow large until cleared.
 - **Coarse weather alerts.** Hourly data replaces minute-level prediction.
 
 ## 7. Prerequisites
