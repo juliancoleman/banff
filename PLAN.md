@@ -1,6 +1,6 @@
 # Banff: the qs bar for macOS on OmniWM
 
-Status: phase 1 (resting housing) is done and confirmed on the Mac; phase 2 (calendar) is written and not yet run there. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
+Status: phases 1 (resting housing) and 2 (calendar) are done and confirmed on the Mac; phase 3 (notifications) is next. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. Where the user's stated intent differs from `~/dotfiles/qs`, the user wins, and the difference is recorded here. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
 
 ## 1. Decisions
 
@@ -83,11 +83,11 @@ Every phase ends with a live check on the MacBook.
    - A press anywhere on the housing toggles it; opening resets to the current month.
    - The housing grows to fit the calendar plus its 12 pt gutter (`Theme.panelPad`), hanging from the row's centre, or the notch's centre on a notched display.
    - Header: ‹ › arrows (28 × 22, 15 pt, hover white 0.05, press 0.10) around "November 2026" (12 pt Medium), with a hairline rule (`Theme.rule`) below.
-   - Grid: S M T W T F S (10 pt pencil), a Sunday-first 24 pt grid with 2 pt gaps and as many rows as the month needs, planner rules between weeks, and adjacent-month days in `statusDim`. Today is a 22 pt `#8AA5C0` disc with `#111922` SemiBold text.
+   - Grid: S M T W T F S (10 pt pencil), a Sunday-first 24 pt grid with 2 pt gaps and as many rows as the month needs, planner rules between weeks, and adjacent-month days in `statusDim`. Today is marked only by `#8AA5C0` text, with no disc. That departs from `~/dotfiles/qs` `MonthGrid.qml`, which still draws a disc; this is the user's call.
    - Navigation: arrows or Left/Right. Days slide 18 pt in the direction of travel and fade in from 45 % inside a mask, while the rules stay put. Changes in row count resize the housing on its spring.
    - Escape, an outside press or another press on the housing closes it.
 
-   Code: `lib/banff/calendar.luau` (date maths, `grid`, `render`), wired into `widgets/banff/init.luau`. The island envelope grew to 440 × 280 for the tallest month. Accept: matches qs on the Mac, month navigation by mouse and keys, outside press and Escape close, and the larger envelope still passes clicks through.
+   Code: `lib/banff/calendar.luau` (date maths, `grid`, `render`), wired into `widgets/banff/init.luau`. The island envelope grew to 440 × 280 for the tallest month. Done on the Mac: appearance, mouse and keyboard navigation, closing, and click-through on windows under the larger envelope.
 3. **Notifications circle + panel.**
 4. **Status temporary states.**
 5. **Control center.**

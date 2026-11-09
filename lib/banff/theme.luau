@@ -19,7 +19,6 @@ return {
         lift = "#FFFFFF0D", -- hover: white at 0.05
         press = "#FFFFFF1A", -- press: white at 0.10
         today = "#8AA5C0", -- blue-black light
-        todayInk = "#111922",
     },
 
     -- Housing (points)

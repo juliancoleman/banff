@@ -1,6 +1,6 @@
 -- The qs calendar (Clock/MonthGrid.qml, MonthHeader.qml, MonthArrow.qml): a month title between
 -- ‹ › arrows over a Sunday-first grid with only as many week rows as the month needs, planner rules
--- between weeks, adjacent-month days dimmed and today on a blue-black disc. Navigation slides the
+-- between weeks, adjacent-month days dimmed and today in blue-black text. Navigation slides the
 -- days 18 pt in the direction of travel while fading in from 45 %.
 
 local theme = require("./theme")
@@ -120,23 +120,23 @@ local function header(year: number, month: number, onShift)
     })
 end
 
+-- Today differs only in text colour; there is no disc behind it.
 local function cell(entry: Cell, index: number)
-    local children = { key = "c" .. index, w = CELL, h = CELL }
-    if entry.today then
-        local disc = CELL - GAP
-        children[#children + 1] = ui.box({ key = "disc", w = disc, h = disc, radius = disc / 2, fill = theme.colors.today })
-    end
-    children[#children + 1] = ui.text({
-        key = "day",
-        text = tostring(entry.day),
-        font = theme.font,
-        size = 12,
-        weight = if entry.today then "semibold" else "medium",
-        color = if entry.today then theme.colors.todayInk
-            elseif entry.inMonth then theme.colors.text
-            else theme.colors.statusDim,
+    return ui.stack({
+        key = "c" .. index,
+        w = CELL,
+        h = CELL,
+        ui.text({
+            key = "day",
+            text = tostring(entry.day),
+            font = theme.font,
+            size = 12,
+            weight = "medium",
+            color = if entry.today then theme.colors.today
+                elseif entry.inMonth then theme.colors.text
+                else theme.colors.statusDim,
+        }),
     })
-    return ui.stack(children)
 end
 
 -- The open calendar: header, weekday letters, then the weeks. `direction` (-1, 0, 1) is the last
