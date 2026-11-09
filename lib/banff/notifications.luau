@@ -221,8 +221,18 @@ local function row(ctx, m: Model, item, index: number, bare: boolean)
         exit = { opacity = 0, animate = theme.fade },
     }
     if item.actionsSupported then
+        -- Clicking acts on the notification like qs's default action: dismiss it and open its app.
+        local canDismiss = m.canDismiss
         children.cursor = "pointer"
-        children.onClick = "notifications open " .. item.bundle
+        children.onClick = function(next)
+            if canDismiss then
+                omniwm.run("notifications dismiss " .. item.bundle .. " " .. item.id)
+            end
+            omniwm.run("notifications open " .. item.bundle)
+            if bare then
+                next.state.peek = nil
+            end
+        end
         if not bare then
             children.hover = theme.colors.lift
             children.pressFill = theme.colors.press
@@ -373,6 +383,44 @@ local function peek(ctx, m: Model, item)
     return row(ctx, m, item, 1, true)
 end
 
+-- Orders notifications by when Banff first saw them, newest first, and returns the ids that are new
+-- since the last render (newest first). Notification Center sorts by the notification's own date,
+-- which a sender can set in the past; ordering by arrival puts a late-dated notification on top
+-- instead of burying it. The first loaded snapshot keeps Notification Center's order and reports
+-- nothing new.
+local function track(state, m: Model): { string }
+    local fresh = {}
+    if not m.loaded then
+        return fresh
+    end
+    local seen = state.noteOrder
+    local first = seen == nil
+    if first then
+        seen = { next = 0, order = {} }
+        state.noteOrder = seen
+    end
+    -- Oldest first, so later arrivals get higher numbers.
+    for index = #m.items, 1, -1 do
+        local id = m.items[index].id
+        if seen.order[id] == nil then
+            seen.next += 1
+            seen.order[id] = seen.next
+            if not first then
+                table.insert(fresh, 1, id)
+            end
+        end
+    end
+    local current = {}
+    for _, item in m.items do
+        current[item.id] = seen.order[item.id]
+    end
+    seen.order = current
+    table.sort(m.items, function(a, b)
+        return current[a.id] > current[b.id]
+    end)
+    return fresh
+end
+
 return {
     SLOT = SLOT,
     WIDTH = WIDTH,
@@ -381,4 +429,5 @@ return {
     panel = panel,
     peek = peek,
     rowLayout = rowLayout,
+    track = track,
 }

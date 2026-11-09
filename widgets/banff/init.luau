@@ -90,27 +90,12 @@ local function endPeek(state)
     state.peek = nil
 end
 
--- A newer newest notification is an arrival: the circle shows its app for a moment, and it peeks
--- under the row unless a panel is open (qs NotificationCenter.reveal/peek). The first loaded
--- snapshot only records where things stand.
-local function observeArrivals(state, m)
-    if not m.loaded then
-        return
-    end
-    local newest = m.items[1]
-    local id = if newest then newest.id else nil
-    if state.notesSeen and id == state.newestId then
-        return
-    end
-    local first = not state.notesSeen
-    local previousDate = state.newestDate
-    state.notesSeen = true
-    state.newestId = id
-    state.newestDate = if newest then newest.date else nil
-    if first or newest == nil then
-        return
-    end
-    if previousDate ~= nil and newest.date ~= nil and newest.date <= previousDate then
+-- New notifications (`fresh`, newest first, from notifications.track) are arrivals: the circle
+-- shows the newest one's app for a moment, and it peeks under the row unless a panel is open
+-- (qs NotificationCenter.reveal/peek).
+local function observeArrivals(state, fresh: { string })
+    local id = fresh[1]
+    if id == nil then
         return
     end
     state.media = true
@@ -151,6 +136,7 @@ local function toggleCalendar(ctx)
     state.viewYear, state.viewMonth, state.direction = now.year, now.month, 0
 end
 
+-- Opening also asks OmniWM to re-read Notification Center, which can lag behind on its own.
 local function toggleNotifications(ctx)
     local state = ctx.state
     if state.panel == "notifications" then
@@ -158,6 +144,7 @@ local function toggleNotifications(ctx)
     elseif notifications.model(ctx.data).count > 0 then
         state.panel = "notifications"
         state.peek = nil
+        omniwm.run("notifications refresh")
     end
 end
 
@@ -180,7 +167,7 @@ function render(ctx)
     local m = state.metrics
 
     local notes = notifications.model(ctx.data)
-    observeArrivals(state, notes)
+    observeArrivals(state, notifications.track(state, notes))
     if state.panel == "notifications" and notes.count == 0 then
         state.panel = nil
     end
