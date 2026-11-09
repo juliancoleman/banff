@@ -1,6 +1,6 @@
 # Banff: the qs bar for macOS on OmniWM
 
-Status: phases 1–3 (resting housing, calendar, notifications) are done on the Mac; phase 4 (status temporary states) is written and not yet run there. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. Where the user's stated intent differs from `~/dotfiles/qs`, the user wins, and the difference is recorded here. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
+Status: phases 1–4 (resting housing, calendar, notifications, status temporary states) are done on the Mac; phase 5 (control center) is written and not yet run there. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. Where the user's stated intent differs from `~/dotfiles/qs`, the user wins, and the difference is recorded here. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
 
 ## 1. Decisions
 
@@ -44,7 +44,7 @@ Not yet ported from rest: the 1.06 hover zoom (scaling about the centre would li
 | Calendar (`Clock/MonthGrid.qml`, `MonthHeader.qml`, `MonthArrow.qml`) | Phase 2, below | None known |
 | Notifications circle + panel | Phase 3, below | macOS still draws its own banners |
 | Status temporary states (`StatusIndicator.qml`) | Phase 4, below | No wired-network glyph (OmniWM reports Wi-Fi only) |
-| Control center | Grows out of the status circle. Toggles via `wifi`/`bluetooth`; audio via `outputs`/`volume`/`microphone`; brightness; hardware via `cpu/memory/gpu/disk/thermal`; power via `session …` | Wi-Fi scan/join and Bluetooth pairing open System Settings `[INFERENCE]`. Fans dropped |
+| Control center | Phase 5, below | No Wi-Fi/Bluetooth power, join or pair; no input-device switching; no fans |
 | Weather panel | `ctx.data.weather` `hours`/`days`; next-hour transitions from `hours[].rain` | No NWS alerts, no automatic location |
 | Settings | Root `settings.toml`: **24-hour clock** so far, shown in **Settings > Styles & Widgets > Island**; weather on/off is the Weather component's Enabled switch | None |
 | Secure prompt, fan helper, launcher, workspaces | Dropped | Raycast; `pinentry-mac`; Touch ID `sudo` |
@@ -111,7 +111,20 @@ Every phase ends with a live check on the MacBook.
    - OmniWM does not watch the brightness keys (`context-data.mdx` "Brightness and system controls"), so the brightness state appears only after Banff's own brightness changes (phase 5). That also avoids qs's AutoBrightness ramp popping the circle.
 
    Code: `lib/banff/status.luau` (`observe`, `width`, `render`, state in `ctx.state.status`), paths in `lib/banff/glyphs.luau`.
-5. **Control center.**
+5. **Control center.** From `~/dotfiles/qs` `Control/ControlCenter.qml`, `ToggleTile`, `SliderTile`, `UsageTile`, `ListRow`, `BluetoothPage`, `AudioPage`, `PowerPage`, and `Status/Knob.qml`:
+   - A press on the status circle toggles it; while it is open the circle shows an X. It replaces the calendar or notifications panel and closes like them (outside press, Escape); Escape on a page goes back home first.
+   - 298 pt wide. Header (27 pt): battery percentage on the left, a power button (24 pt, Lucide `power-off`) on the right. qs's settings gear and Do Not Disturb buttons are dropped: Banff's settings live in OmniWM's Island settings, and Do Not Disturb stays native.
+   - Home, 6 pt gaps with rules between groups: Wi-Fi and Bluetooth tiles (half width, divider between), then volume, microphone and brightness sliders (each only when supported), then memory, CPU and disk meters.
+   - Tile: 44 pt row, 30 pt knob (filled `#8AA5C0` with dark glyph when on, outlined `stroke` otherwise), title 12 pt Medium, subtitle 11 pt pencil, chevron, hover and press fills. Wi-Fi shows SSID / Not connected / Off and opens Wi-Fi settings. Bluetooth shows the connected device, "N devices", On, Off or "Allow access" and opens the Bluetooth page.
+   - Slider: knob (mute for volume and microphone via `volume mute` / `microphone mute`), a 2 pt track with a paper fill and quarter ticks, the value in pencil, and for volume a chevron to the Output page. Dragging goes through a native `ui.slider` laid over the track at 2 % opacity, so the visible track keeps qs's look; it runs `volume set`, `microphone set` or `brightness set`. Brightness changes from here also trigger the status circle's brightness state.
+   - Meters: three 30 pt knobs with a level ring and the percentage beneath (`memory`, `cpu`, `disk`).
+   - Pages slide in 24 pt from the right with a back button (‹ title):
+     - Bluetooth: the tile, then OmniWM's devices with kind glyphs, battery rings, "Connected · 80%" / "Connected" / "Paired" and a check when connected. Rows open Bluetooth settings, since OmniWM cannot connect or disconnect.
+     - Output: the volume slider and the output devices (check on the default); a row runs `volume output <id>`.
+     - Power: Lock and Sleep act at once; Restart and Shut Down need a second press ("Confirm …", knob turns bordeaux), as in qs, and macOS then asks again. Any action closes the panel.
+   - Not ported, because OmniWM has no way to do them: Wi-Fi and Bluetooth power, network list and join, Bluetooth pairing (`context-data.mdx`: power switches use the settings handoffs), the input-device page, the display page (refresh rates), fans, and Ethernet. OmniWM reads CPU and GPU temperatures from the SMC (`ctx.data.thermal`), but no fan speeds; qs's usage tile shows no temperatures, so neither does Banff yet.
+
+   Code: `lib/banff/control.luau`, wired into `widgets/banff/init.luau` (`state.panel = "control"`, `state.controlPage`, `state.armed`).
 6. **Weather panel.**
 7. **Settings schema.**
 

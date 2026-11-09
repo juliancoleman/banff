@@ -21,6 +21,8 @@ return {
         today = "#8AA5C0", -- blue-black light
         todayInk = "#111922", -- text on `today`
         track = "#14181B", -- notification circle face
+        stroke = "#D1DBE03D", -- rgba(0.82, 0.86, 0.88, 0.24): outlined knobs
+        danger = "#4C1722", -- bordeaux: armed power actions
     },
 
     -- Housing (points)

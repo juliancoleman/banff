@@ -1,6 +1,6 @@
 format = 1
 name = "banff"
-version = "0.5.2"
+version = "0.6.0"
 api = 1
 author = "Julian Coleman"
 license = "MIT"

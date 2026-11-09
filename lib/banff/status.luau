@@ -280,7 +280,7 @@ local function glyphParts(icon: string, data, wifiBars: number)
         return { stroke("mic", paths.micOff, ink) }
     elseif icon == "brightness" then
         return { stroke("sun", paths.sun, ink) }
-    elseif icon == "zap" or icon == "bluetooth" or icon == "play" or icon == "pause" then
+    elseif icon == "zap" or icon == "bluetooth" or icon == "play" or icon == "pause" or icon == "close" then
         return { stroke(icon, paths[icon], ink) }
     end
     return wifiGlyph(data.wifi, wifiBars)
@@ -315,8 +315,9 @@ local function controlLevel(data, control: string): number
     return ((data.brightness and data.brightness.value) or 0) / 100
 end
 
--- The status slot. `s` is this display's status state (`ctx.state.status`).
-local function render(ctx, s)
+-- The status slot. `s` is this display's status state (`ctx.state.status`). With `closeAction` (the
+-- control center is open) the glyph is an X, as in qs.
+local function render(ctx, s, closeAction: boolean?)
     local data = ctx.data
     local wifi = data.wifi
     local bars = wifiLevel(wifi and wifi.rssi, s.wifiLevel)
@@ -360,7 +361,7 @@ local function render(ctx, s)
     })
 
     -- Keyed by icon so a change swaps glyphs: the old one fades and shrinks, the new one grows in.
-    local icon = if s.slot then s.slot.icon else "wifi"
+    local icon = if closeAction then "close" elseif s.slot then s.slot.icon else "wifi"
     local glyph = {
         key = "glyph:" .. icon,
         w = theme.statusGlyph,

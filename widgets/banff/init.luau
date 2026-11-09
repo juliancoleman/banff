@@ -8,6 +8,7 @@
 
 local calendar = require("../lib/banff/calendar")
 local clock = require("../lib/banff/clock")
+local control = require("../lib/banff/control")
 local notifications = require("../lib/banff/notifications")
 local status = require("../lib/banff/status")
 local theme = require("../lib/banff/theme")
@@ -148,6 +149,18 @@ local function toggleNotifications(ctx)
     end
 end
 
+-- The status circle toggles the control center, which opens on its home page.
+local function toggleControl(ctx)
+    local state = ctx.state
+    if state.panel == "control" then
+        state.panel = nil
+        return
+    end
+    state.panel = "control"
+    state.peek = nil
+    state.controlPage, state.controlDirection, state.armed = nil, 0, nil
+end
+
 local function shiftMonth(ctx, delta: number)
     local state = ctx.state
     if state.panel ~= "calendar" then
@@ -220,6 +233,10 @@ function render(ctx)
         local element, panelHeight = notifications.panel(ctx, notes)
         hangElement = element
         hangWidth, hangHeight = notifications.WIDTH, panelHeight
+    elseif panel == "control" then
+        local element, panelHeight = control.panel(ctx)
+        hangElement = element
+        hangWidth, hangHeight = control.WIDTH, panelHeight
     elseif peekItem then
         local element, rowHeight = notifications.peek(ctx, notes, peekItem)
         hangElement = element
@@ -284,7 +301,9 @@ function render(ctx)
             elseif event.key == "right" then
                 shiftMonth(next, 1)
             elseif event.key == "escape" then
-                closePanels(next.state)
+                if next.state.panel ~= "control" or not control.back(next.state) then
+                    closePanels(next.state)
+                end
             end
         end,
         onOutsidePress = if panel ~= nil
@@ -316,7 +335,10 @@ function render(ctx)
             dx = rightStart - x,
             dy = 0,
             animate = theme.spring,
-            status.render(ctx, state.status),
+            cursor = "pointer",
+            help = if panel == "control" then "Close control center" else "Control center",
+            onClick = toggleControl,
+            status.render(ctx, state.status, panel == "control"),
         }),
     }
     if hovered then
@@ -350,6 +372,8 @@ function render(ctx)
             calendar.render(state.viewYear, state.viewMonth, today(ctx), state.direction or 0, shiftMonth) }
     elseif panel == "notifications" then
         hang = { key = "notificationsPanel", hangElement }
+    elseif panel == "control" then
+        hang = { key = "controlPanel", hangElement }
     elseif peekItem then
         hang = {
             key = "peekPanel",
