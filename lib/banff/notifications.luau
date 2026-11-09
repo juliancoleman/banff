@@ -43,6 +43,7 @@ type Model = {
     canDismiss: boolean,
     clearing: boolean,
     action: any,
+    dismissAll: any,
 }
 
 -- Visible notifications (newest first, without ones already sent for dismissal) and what the panel
@@ -50,7 +51,7 @@ type Model = {
 local function model(data): Model
     local feed = data.notifications
     local result: Model = { loaded = false, items = {}, count = 0, names = {}, canDismiss = false, clearing = false,
-        action = nil }
+        action = nil, dismissAll = nil }
     if feed == nil or (feed.state ~= "ready" and feed.state ~= "incomplete" and feed.state ~= "empty") then
         return result
     end
@@ -73,6 +74,7 @@ local function model(data): Model
     result.canDismiss = feed.membershipComplete == true
     result.clearing = feed.dismissAll ~= nil and feed.dismissAll.active == true
     result.action = feed.action
+    result.dismissAll = feed.dismissAll
     return result
 end
 
@@ -266,16 +268,28 @@ local function row(ctx, m: Model, item, index: number, bare: boolean)
     return ui.stack(children), layout.height
 end
 
+-- Outcomes of a dismiss (`action.state`) or of Clear all (`dismissAll.outcome`) worth a note.
+-- "unavailable" means OmniWM could not reach Notification Center's own controls: it dismisses by
+-- opening Notification Center from the menu bar clock through Accessibility.
 local MESSAGES = {
     denied = "Allow OmniWM in Accessibility settings to dismiss notifications.",
     dispatchedPanelOpen = "Close Notification Center to finish.",
     failedPanelOpen = "Close Notification Center, then try again.",
     failed = "Notification Center did not dismiss it.",
     timeout = "Notification Center did not respond.",
-    unavailable = "Notification Center is unavailable.",
+    unavailable = "OmniWM could not reach Notification Center to dismiss.",
+    ambiguous = "Notification Center's list did not match; try again.",
+    notFound = "Notification Center no longer has that notification.",
 }
 
 local function message(m: Model): string?
+    local batch = m.dismissAll
+    if batch and (batch.state == "failed" or batch.state == "partial") then
+        if batch.state == "partial" then
+            return batch.failed .. " of " .. batch.total .. " notifications stayed in Notification Center."
+        end
+        return MESSAGES[batch.outcome or "failed"] or MESSAGES.failed
+    end
     return if m.action then MESSAGES[m.action.state] else nil
 end
 

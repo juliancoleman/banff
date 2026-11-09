@@ -93,10 +93,12 @@ Every phase ends with a live check on the MacBook.
    - Arrival peek: a new notification shows its row under the time row for 5 s, restarted while hovered, unless a panel is open. An arrival is an id Banff has not seen before. Rows are ordered by when Banff first saw them, newest first, because Notification Center sorts by the sender's own date, which can be in the past. The first snapshot after load keeps Notification Center's order and reports nothing new. Opening the panel asks OmniWM to re-read Notification Center (`notifications refresh`).
    - Panel: a press on the circle toggles it; it replaces the calendar, and a press on the housing replaces it with the calendar. It is 298 pt wide: "Notifications" (13 pt Medium) with the count (11 pt pencil) and a Clear all button (`notifications dismiss-all`), then rows up to 330 pt tall, scrolling past that. It draws the newest 50 rows, with "N more in Notification Center" below; Notification Center can retain 256. Row layouts (text measurement) are cached in `ctx.state` by id. It closes when the last notification goes, on Escape or on an outside press.
    - Row: a 30 pt round app icon, app name (10 pt pencil), title (12 pt Medium), subtitle and body (11 pt pencil, 3 lines, then Show more/Show less in `#8AA5C0`), a 22 pt dismiss X at 55 % opacity (100 % on hover, `notifications dismiss <bundle> <id>`), rules between rows, and hover/press fills. A press dismisses it (when dismissal is possible) and opens its app (`notifications open <bundle>`), like qs's default action closing the notification; in the peek it also ends the peek.
-   - Status: Accessibility denial and "Close Notification Center to finish" outcomes show as a one-line note under the header.
+   - Status: failed dismissals and Clear all runs (Accessibility denied, Notification Center unreachable, partial clears, "Close Notification Center to finish") show as a one-line note under the header.
    - Differences from qs, all macOS-imposed: the count is Notification Center's retained list, not live daemon notifications, so items stay until dismissed or cleared; there are no notification actions or urgency (no critical ring); there are no images, so the app icon stands in; Do Not Disturb stays native (macOS Focus, which OmniWM does not expose), so there is no moon.
 
    Code: `lib/banff/notifications.luau`, wired into `widgets/banff/init.luau` (`state.panel` is now `"calendar"`, `"notifications"` or nil, plus `state.peek`). The island envelope grew to 440 × 440 for the tallest panel.
+
+   On the Mac: the panel opens and closes (X, Escape, clock, outside press). It froze in 0.4.0, which re-measured every row each second; layout caching in 0.4.1 fixed that. Dismissing reported "unavailable" (open question below).
 4. **Status temporary states.**
 5. **Control center.**
 6. **Weather panel.**
@@ -108,6 +110,7 @@ Every phase ends with a live check on the MacBook.
 - **Island click-through.** The 440 × 280 envelope passed clicks through to the menu bar and windows. Phase 3 grows it to 440 × 440, so it needs one more check.
 - **Notch geometry.** Untested on a notched display. The layout depends on `island.notch` being in envelope coordinates, as the docs state.
 - **Duplicate notifications** alongside macOS banners. Notification Center's retained list also counts items the user has already seen as banners, so the count can grow large until cleared.
+- **Dismissal depends on Notification Center's own UI.** OmniWM dismisses by finding `com.apple.notificationcenterui` and `com.apple.MenuBarAgent`, pressing the menu bar clock (`com.apple.menuextra.clock`) through Accessibility to open Notification Center, and pressing the item's close control (`ShellNotificationAccessibility.swift`, `ShellNotificationsController+Platform.swift`). It reports `unavailable` when either process is missing, when the clock has no Accessibility element, or when its observer cannot attach. Open: which one applies on the work MacBook.
 - **Coarse weather alerts.** Hourly data replaces minute-level prediction.
 
 ## 7. Prerequisites
