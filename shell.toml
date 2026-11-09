@@ -1,17 +1,11 @@
 theme = "banff"
-leading = ["banff-workspaces"]
-center = ["banff-grow"]
-trailing = ["banff-probe"]
+leading = []
+center = []
+trailing = []
 
-[workspaceBar]
-position = "right"
-height = 56
-fullWidth = true
-reserveLayoutSpace = true
-transparentBackground = true
-showItemBackgrounds = false
-showAccentHighlights = false
-solidBlackBackground = false
-showLabels = false
-xOffset = 0
-yOffset = 0
+[island]
+root = "banff"
+displays = "main"
+width = 440
+height = 80
+fullscreen = "hide"
