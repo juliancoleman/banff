@@ -345,7 +345,9 @@ local function render(ctx, s)
             borderWidth = lineWidth,
         }),
     }
-    -- Always present so its path morphs between values; an empty ring is hidden, not removed.
+    -- Always present, so an empty ring is hidden rather than removed. Not animated: OmniWM morphs a
+    -- path's `d` with Core Animation, and on the Mac that drew the ring as a square mid-change even
+    -- with identical commands on both sides. Values snap instead.
     circle[#circle + 1] = ui.path({
         key = "fill",
         w = ring,
@@ -355,7 +357,6 @@ local function render(ctx, s)
         border = color or theme.colors.text,
         borderWidth = lineWidth,
         opacity = if value and value > 0.005 then 1 else 0,
-        animate = theme.fade,
     })
 
     -- Keyed by icon so a change swaps glyphs: the old one fades and shrinks, the new one grows in.
