@@ -175,17 +175,19 @@ function render(ctx)
         }),
     }
     if hovered then
-        -- A row as wide as the housing centres the date; positioning the text itself by measured
-        -- width put it off the housing's left edge on the Mac.
-        housing[#housing + 1] = ui.box({
+        -- A housing-wide row with growing spacers on both sides centres the date (the pattern the
+        -- official styles use). A plain box lays its child out from the leading edge.
+        housing[#housing + 1] = ui.row({
             key = "date",
             w = width,
             h = theme.dateRow,
+            gap = 0,
             align = "topLeading",
             dx = 0,
             dy = height - 1,
             appear = { opacity = 0, dy = -4, animate = theme.spring },
             exit = { opacity = 0, animate = theme.fade },
+            ui.box({ grow = 1, h = 1 }),
             ui.text({
                 text = dateText(ctx),
                 font = theme.font,
@@ -193,6 +195,7 @@ function render(ctx)
                 weight = "medium",
                 color = theme.colors.textSecondary,
             }),
+            ui.box({ grow = 1, h = 1 }),
         })
     end
 
