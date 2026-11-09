@@ -19,6 +19,8 @@ local KNOB_INSET = 7
 local TEXT_X = KNOB_INSET + KNOB + 9
 local TEXT_WIDTH = WIDTH - TEXT_X - 34
 local BODY_LINES = 3
+local MAX_ROWS = 50 -- rows drawn; the rest are counted in a footer
+local MORE = 24 -- footer height
 
 local BELL = "M10.268 21a2 2 0 0 0 3.464 0 M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 0.74 -1.673"
     .. "C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499 -1.411 5.956 -2.738 7.326z"
@@ -131,8 +133,20 @@ local function bodyStyle(lines: number)
     return { font = theme.font, size = 11, weight = "regular", maxWidth = TEXT_WIDTH, lines = lines }
 end
 
--- Row layout facts: body lines shown, whether it is cut, and the row height.
+-- Row layout facts: body lines shown, whether it is cut, and the row height. Text measurement is the
+-- expensive part of a render, and a notification's text never changes, so layouts are cached in
+-- `ctx.state` by id and expansion. The cache is dropped when it outgrows the retained list.
 local function rowLayout(ctx, item, expanded: boolean)
+    local cache = ctx.state.noteLayouts
+    if cache == nil or cache.size > 600 then
+        cache = { size = 0, entries = {} }
+        ctx.state.noteLayouts = cache
+    end
+    local key = if expanded then item.id .. ":expanded" else item.id
+    local cached = cache.entries[key]
+    if cached then
+        return cached
+    end
     local body = bodyText(item)
     local lines = if expanded then 100 else BODY_LINES
     local bodyHeight, truncated = 0, false
@@ -149,12 +163,15 @@ local function rowLayout(ctx, item, expanded: boolean)
     if truncated or expanded then
         height += 2 + 13
     end
-    return {
+    local layout = {
         body = body,
         lines = lines,
         truncated = truncated,
         height = math.max(height + 2 * INSET, KNOB + 2 * KNOB_INSET),
     }
+    cache.entries[key] = layout
+    cache.size += 1
+    return layout
 end
 
 -- One notification. `bare` drops the hover box and rule (the arrival peek).
@@ -252,18 +269,23 @@ local function message(m: Model): string?
     return if m.action then MESSAGES[m.action.state] else nil
 end
 
-local function listHeight(ctx, m: Model): number
-    local total = 0
+-- The rows the panel draws: the newest MAX_ROWS (Notification Center may retain up to 256), their
+-- total height, and how many are left out.
+local function listRows(ctx, m: Model): ({ any }, number, number)
+    local rows, total = {}, 0
     local expandedSet = ctx.state.expandedNotes or {}
-    for _, item in m.items do
+    for index, item in m.items do
+        if index > MAX_ROWS then
+            break
+        end
+        rows[index] = item
         total += rowLayout(ctx, item, expandedSet[item.id] == true).height
     end
-    return total
-end
-
--- Height of the open panel: header, gap, optional note, list (capped).
-local function panelHeight(ctx, m: Model): number
-    return HEADER + HEADER_GAP + (if message(m) then NOTE else 0) + math.min(LIST_MAX, listHeight(ctx, m))
+    local hidden = m.count - #rows
+    if hidden > 0 then
+        total += MORE
+    end
+    return rows, total, hidden
 end
 
 local function clearButton(ctx, m: Model)
@@ -286,28 +308,42 @@ local function clearButton(ctx, m: Model)
     return ui.stack(props)
 end
 
--- The open panel. Presses on its gutter are absorbed so they do not reach the housing.
+-- The open panel and its height. Presses on its gutter are absorbed so they do not reach the housing.
 local function panel(ctx, m: Model)
     local note = message(m)
-    local total = listHeight(ctx, m)
+    local rows, total, hidden = listRows(ctx, m)
+    local listShown = math.min(LIST_MAX, total)
+    local height = HEADER + HEADER_GAP + (if note then NOTE else 0) + listShown
     local list = {
         key = "list",
         w = WIDTH,
-        h = math.min(LIST_MAX, total),
+        h = listShown,
         scroll = total > LIST_MAX,
         gap = 0,
         center = false,
         align = "topLeading",
         dy = HEADER + HEADER_GAP + (if note then NOTE else 0),
     }
-    for index, item in m.items do
+    for index, item in rows do
         list[#list + 1] = (row(ctx, m, item, index, false))
+    end
+    if hidden > 0 then
+        list[#list + 1] = ui.row({
+            key = "more",
+            w = WIDTH,
+            h = MORE,
+            gap = 0,
+            ui.box({ grow = 1, h = 1 }),
+            ui.text({ text = hidden .. " more in Notification Center", font = theme.font, size = 10, weight = "medium",
+                color = theme.colors.textSecondary }),
+            ui.box({ grow = 1, h = 1 }),
+        })
     end
 
     local children = {
         key = "notes",
         w = WIDTH,
-        h = panelHeight(ctx, m),
+        h = height,
         onClick = function() end,
         ui.row({
             key = "header",
@@ -329,7 +365,7 @@ local function panel(ctx, m: Model)
             dy = HEADER + HEADER_GAP })
     end
     children[#children + 1] = ui.column(list)
-    return ui.stack(children)
+    return ui.stack(children), height
 end
 
 -- The arrival peek: the newest row on its own, and its height.
@@ -343,7 +379,6 @@ return {
     model = model,
     badge = badge,
     panel = panel,
-    panelHeight = panelHeight,
     peek = peek,
     rowLayout = rowLayout,
 }

@@ -223,15 +223,17 @@ function render(ctx)
 
     -- What hangs under the row, if anything: its width and height (gutter included).
     local hangWidth, hangHeight = 0, 0
-    local peekElement = nil
+    local hangElement = nil -- the notifications panel or peek, built once with its height
     if panel == "calendar" then
         local _, rows = calendar.grid(state.viewYear, state.viewMonth, nil)
         hangWidth, hangHeight = calendar.width, calendar.height(rows)
     elseif panel == "notifications" then
-        hangWidth, hangHeight = notifications.WIDTH, notifications.panelHeight(ctx, notes)
+        local element, panelHeight = notifications.panel(ctx, notes)
+        hangElement = element
+        hangWidth, hangHeight = notifications.WIDTH, panelHeight
     elseif peekItem then
         local element, rowHeight = notifications.peek(ctx, notes, peekItem)
-        peekElement = element
+        hangElement = element
         hangWidth, hangHeight = notifications.WIDTH, rowHeight
     end
 
@@ -358,15 +360,15 @@ function render(ctx)
         hang = { key = "calendarPanel",
             calendar.render(state.viewYear, state.viewMonth, today(ctx), state.direction or 0, shiftMonth) }
     elseif panel == "notifications" then
-        hang = { key = "notificationsPanel", notifications.panel(ctx, notes) }
-    elseif peekElement then
+        hang = { key = "notificationsPanel", hangElement }
+    elseif peekItem then
         hang = {
             key = "peekPanel",
             hoverGrace = 0.12,
             onHover = function(next, event)
                 next.state.peekHovered = event.phase == "began"
             end,
-            peekElement,
+            hangElement,
         }
     end
     if hang then
