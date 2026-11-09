@@ -1,0 +1,29 @@
+# Tokens from ~/code/qs qml/shell/Common/Theme.qml. One palette: light mirrors dark.
+
+[light]
+background = "#000000"
+surface = "#000000"
+elevatedSurface = "#252A2E"
+foreground = "#F2F0EA"
+secondaryForeground = "#AEB5B9"
+mutedForeground = "#F2F0EA4D"
+border = "#D1DBE052"
+accent = "#B7C1FF"
+accentForeground = "#1B1E2B"
+success = "#7E9C88"
+error = "#4C1722"
+focus = "#B7C1FF"
+
+[dark]
+background = "#000000"
+surface = "#000000"
+elevatedSurface = "#252A2E"
+foreground = "#F2F0EA"
+secondaryForeground = "#AEB5B9"
+mutedForeground = "#F2F0EA4D"
+border = "#D1DBE052"
+accent = "#B7C1FF"
+accentForeground = "#1B1E2B"
+success = "#7E9C88"
+error = "#4C1722"
+focus = "#B7C1FF"

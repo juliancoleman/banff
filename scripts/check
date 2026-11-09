@@ -1,0 +1,20 @@
+#!/bin/sh
+# Type-checks every Luau file against OmniShell's definitions.
+# Uses the running OmniWM's copy when present, else the v0.8.0 file cached in .cache/.
+# Needs luau-lsp on PATH (Linux: `nix shell nixpkgs#luau-lsp`).
+set -eu
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+defs="$HOME/.config/omniwm/shell/omniwm.d.luau"
+if [ ! -f "$defs" ]; then
+    defs="$root/.cache/omniwm.d.luau"
+    if [ ! -f "$defs" ]; then
+        mkdir -p "$root/.cache"
+        curl -fsSL -o "$defs" \
+            "https://raw.githubusercontent.com/OmniNull/OmniWM/v0.8.0/Sources/OmniWM/Resources/omniwm.d.luau"
+    fi
+fi
+
+cd "$root"
+find lib widgets -name '*.luau' -exec luau-lsp analyze --no-flags-enabled --platform standard \
+    --definitions=@omniwm="$defs" {} +
