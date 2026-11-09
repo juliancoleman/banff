@@ -1,27 +1,41 @@
 -- Compact weather from the qs notch (Weather/WeatherCircle.qml): a Lucide glyph and whole degrees
 -- without a unit, from OmniWM's weather feed. Shared by the weather component (which draws it) and
--- the island root (which reserves its width).
+-- the island root (which reserves its width). While the feed has nothing to show, an enabled
+-- component draws a dimmed cloud and "–", with the reason in its tooltip.
 
 local theme = require("./theme")
 local glyphs = require("./glyphs")
 
 local TEXT = { font = theme.font, size = theme.digitSize, weight = "medium" }
 
-local function temperature(w): string
-    return if w.status == "stale" then "–" else tostring(math.round(w.temp))
+type Summary = { text: string, glyph: string, help: string, ready: boolean }
+
+local function summary(w): Summary
+    if w == nil then
+        return { text = "–", glyph = "cloud", ready = false,
+            help = "No weather yet. Set a location in Settings > Styles & Widgets > Island > Weather." }
+    elseif w.access == "off" then
+        return { text = "–", glyph = "cloud", ready = false,
+            help = "Weather is off in Settings > Network & Permissions." }
+    elseif w.access ~= "ok" then
+        return { text = "–", glyph = "cloud", ready = false, help = "Weather is blocked by your organization." }
+    end
+    local place = if w.place then " · " .. w.place else ""
+    if w.status == "stale" then
+        return { text = "–", glyph = glyphs.weatherGlyph(w.code, w.day), ready = false,
+            help = w.condition .. place .. " (out of date)" }
+    end
+    return { text = tostring(math.round(w.temp)), glyph = glyphs.weatherGlyph(w.code, w.day), ready = true,
+        help = w.condition .. place }
 end
 
--- Width of the compact view in points, or nil when the feed is off or not loaded yet.
-local function width(ctx): number?
-    local w = ctx.data.weather
-    if w == nil or w.access ~= "ok" then
-        return nil
-    end
-    local textWidth = math.ceil((ctx.format.measure(temperature(w), TEXT)))
+-- Width of the compact view in points.
+local function width(ctx): number
+    local textWidth = math.ceil((ctx.format.measure(summary(ctx.data.weather).text, TEXT)))
     return 2 * theme.weatherInset + theme.weatherIcon + theme.weatherIconGap + textWidth
 end
 
-local function icon(name: string)
+local function icon(name: string, color: string)
     local size = theme.weatherIcon
     local k = size / 24
     local children = {
@@ -34,7 +48,7 @@ local function icon(name: string)
             h = size,
             viewBox = { 0, 0, 24, 24 },
             d = glyphs.weather[name],
-            border = theme.colors.text,
+            border = color,
             borderWidth = 2 * k,
         }),
     }
@@ -48,30 +62,27 @@ local function icon(name: string)
             align = "topLeading",
             dx = dot[1] * k - d / 2,
             dy = dot[2] * k - d / 2,
-            fill = theme.colors.text,
+            fill = color,
         })
     end
     return ui.stack(children)
 end
 
 local function render(ctx, height: number)
-    local w = ctx.data.weather
-    local total = width(ctx)
-    if w == nil or w.access ~= "ok" or total == nil then
-        return ui.box({ w = 0, h = 0 })
-    end
+    local s = summary(ctx.data.weather)
+    local color = if s.ready then theme.colors.text else theme.colors.textSecondary
     local inset = theme.weatherInset
     return ui.row({
         key = "weather",
-        w = total,
+        w = width(ctx),
         h = height,
         gap = 0,
-        help = w.condition,
+        help = s.help,
         ui.box({ w = inset, h = 1 }),
-        icon(glyphs.weatherGlyph(w.code, w.day)),
+        icon(s.glyph, color),
         ui.box({ w = theme.weatherIconGap, h = 1 }),
-        ui.text({ key = "temp", text = temperature(w), font = theme.font, size = theme.digitSize, weight = "medium",
-            color = theme.colors.text }),
+        ui.text({ key = "temp", text = s.text, font = theme.font, size = theme.digitSize, weight = "medium",
+            color = color }),
         ui.box({ w = inset, h = 1 }),
     })
 end

@@ -13,11 +13,16 @@ interval = 1
 
 local WEATHER = "weather" -- component instance id in shell.toml
 
--- Whether the weather instance is configured and enabled.
+-- Whether the weather instance is enabled. Without component data (not documented for every
+-- root context) it counts as enabled, so a missing feed shows the placeholder instead of nothing.
 local function weatherEnabled(ctx): boolean
-    for _, component in ctx.data.components or {} do
+    local components = ctx.data.components
+    if components == nil then
+        return true
+    end
+    for _, component in components do
         if component.id == WEATHER then
-            return component.enabled
+            return component.enabled ~= false
         end
     end
     return false
