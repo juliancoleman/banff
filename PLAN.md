@@ -1,6 +1,6 @@
 # Banff: the qs bar for macOS on OmniWM
 
-Status: phases 1 (resting housing) and 2 (calendar) are done and confirmed on the Mac; phase 3 (notifications) is written and not yet run there. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. Where the user's stated intent differs from `~/dotfiles/qs`, the user wins, and the difference is recorded here. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
+Status: phases 1–3 (resting housing, calendar, notifications) are done on the Mac; phase 4 (status temporary states) is written and not yet run there. The appearance source is the live qs shell: `~/dotfiles/qs` (QML under `qml/shell`) and `~/.config/qs/config.json`. `~/code/qs` is two months stale and is not a reference. Where the user's stated intent differs from `~/dotfiles/qs`, the user wins, and the difference is recorded here. The two shells share design and tokens only, no code. The target is OmniWM v0.8.0 or later with OmniShell, on a single work MacBook. This is personal use, not production. Claims marked `[INFERENCE]` come from reading docs or source and have not been tested on a Mac.
 
 ## 1. Decisions
 
@@ -43,7 +43,7 @@ Not yet ported from rest: the 1.06 hover zoom (scaling about the centre would li
 |---|---|---|
 | Calendar (`Clock/MonthGrid.qml`, `MonthHeader.qml`, `MonthArrow.qml`) | Phase 2, below | None known |
 | Notifications circle + panel | Phase 3, below | macOS still draws its own banners |
-| Status temporary states (`StatusIndicator.qml`) | Volume, mic, media and Bluetooth feeds drive the priority and dwell timers via `omniwm.after` | None known |
+| Status temporary states (`StatusIndicator.qml`) | Phase 4, below | No wired-network glyph (OmniWM reports Wi-Fi only) |
 | Control center | Grows out of the status circle. Toggles via `wifi`/`bluetooth`; audio via `outputs`/`volume`/`microphone`; brightness; hardware via `cpu/memory/gpu/disk/thermal`; power via `session …` | Wi-Fi scan/join and Bluetooth pairing open System Settings `[INFERENCE]`. Fans dropped |
 | Weather panel | `ctx.data.weather` `hours`/`days`; next-hour transitions from `hours[].rain` | No NWS alerts, no automatic location |
 | Settings | Root `settings.toml`: **24-hour clock** so far, shown in **Settings > Styles & Widgets > Island**; weather on/off is the Weather component's Enabled switch | None |
@@ -98,8 +98,18 @@ Every phase ends with a live check on the MacBook.
 
    Code: `lib/banff/notifications.luau`, wired into `widgets/banff/init.luau` (`state.panel` is now `"calendar"`, `"notifications"` or nil, plus `state.peek`). The island envelope grew to 440 × 440 for the tallest panel.
 
-   On the Mac: the panel opens and closes (X, Escape, clock, outside press). It froze in 0.4.0, which re-measured every row each second; layout caching in 0.4.1 fixed that. Dismissing reported "unavailable" (open question below).
-4. **Status temporary states.**
+   On the Mac: the panel opens and closes (X, Escape, clock, outside press). It froze in 0.4.0, which re-measured every row each second; layout caching in 0.4.1 fixed that. Dismissing (×, row click, Clear all) reports "unavailable"; OmniWM's own Notifications widget fails the same way on this Mac, so it is an OmniWM limitation, accepted and not worked around. Phase 3 is otherwise done.
+4. **Status temporary states.** From `~/dotfiles/qs` `Status/StatusIndicator.qml`. One glyph slot, held by the highest-priority recent event; lower-priority events are dropped, not queued, and the slot falls back to Wi-Fi when its dwell ends:
+   - 4 Bluetooth device connected (`bluetooth` devices' connected count rises), 1.6 s, after a 3 s startup settle. Disconnects are silent.
+   - 3 Power connected (`power.source` becomes `ac` and stays 600 ms), Lucide `zap`, 1.6 s, after the startup settle; unplugging clears it at once.
+   - 2 Controls: output volume or mute (speaker with near/far waves, or speaker + ×), microphone volume or mute (`mic` / `micOff`), brightness (sun). 1.5 s. The control also takes the ring for its dwell, drawn in paper at that control's level (0 when muted), even when a higher-priority glyph holds the slot.
+   - 1 Media play, pause or track change (`media.playing` or bundle/title/artist), play or pause glyph for the resulting state, 1.6 s.
+   - The first render records a baseline without events.
+   - A glyph change swaps keyed glyphs: the old one fades and shrinks to 60 % in 150 ms, the new one grows in on the spring. qs's sideways slide for its own next/previous is dropped, because OmniWM does not say who changed the track.
+   - At 20 % battery or less (qs `batteryPercentage: "low"`), the percentage sits to the right of the ring (13 pt Medium, 3 pt gap) except while a control holds the ring; the housing widens for it.
+   - OmniWM does not watch the brightness keys (`context-data.mdx` "Brightness and system controls"), so the brightness state appears only after Banff's own brightness changes (phase 5). That also avoids qs's AutoBrightness ramp popping the circle.
+
+   Code: `lib/banff/status.luau` (`observe`, `width`, `render`, state in `ctx.state.status`), paths in `lib/banff/glyphs.luau`.
 5. **Control center.**
 6. **Weather panel.**
 7. **Settings schema.**
@@ -110,7 +120,7 @@ Every phase ends with a live check on the MacBook.
 - **Island click-through.** The 440 × 280 envelope passed clicks through to the menu bar and windows. Phase 3 grows it to 440 × 440, so it needs one more check.
 - **Notch geometry.** Untested on a notched display. The layout depends on `island.notch` being in envelope coordinates, as the docs state.
 - **Duplicate notifications** alongside macOS banners. Notification Center's retained list also counts items the user has already seen as banners, so the count can grow large until cleared.
-- **Dismissal depends on Notification Center's own UI.** OmniWM dismisses by finding `com.apple.notificationcenterui` and `com.apple.MenuBarAgent`, pressing the menu bar clock (`com.apple.menuextra.clock`) through Accessibility to open Notification Center, and pressing the item's close control (`ShellNotificationAccessibility.swift`, `ShellNotificationsController+Platform.swift`). It reports `unavailable` when either process is missing, when the clock has no Accessibility element, or when its observer cannot attach. Open: which one applies on the work MacBook.
+- **Dismissal depends on Notification Center's own UI.** OmniWM dismisses by finding `com.apple.notificationcenterui` and `com.apple.MenuBarAgent`, pressing the menu bar clock (`com.apple.menuextra.clock`) through Accessibility to open Notification Center, and pressing the item's close control (`ShellNotificationAccessibility.swift`, `ShellNotificationsController+Platform.swift`). It reports `unavailable` when either process is missing, when the clock has no Accessibility element, or when its observer cannot attach. On the work MacBook it fails for OmniWM's own widget too; Banff leaves it to OmniWM.
 - **Coarse weather alerts.** Hourly data replaces minute-level prediction.
 
 ## 7. Prerequisites

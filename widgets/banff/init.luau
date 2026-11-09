@@ -165,6 +165,8 @@ function render(ctx)
     local state = ctx.state
     state.metrics = state.metrics or clock.metrics(ctx)
     local m = state.metrics
+    state.status = state.status or {}
+    status.observe(ctx.data, state.status)
 
     local notes = notifications.model(ctx.data)
     observeArrivals(state, notifications.track(state, notes))
@@ -192,7 +194,7 @@ function render(ctx)
     local leadWidth = (weatherWidth or 0) + (badgeWidth or 0)
     local clockWidth = clock.width(m)
     local leftWidth = leadWidth + (if leadWidth > 0 then theme.gap else 0) + clockWidth
-    local rightWidth = theme.status
+    local rightWidth = status.width(ctx, state.status)
 
     -- The resting row in envelope coordinates: where the left group starts, where status starts,
     -- and the centre an open panel hangs from.
@@ -314,7 +316,7 @@ function render(ctx)
             dx = rightStart - x,
             dy = 0,
             animate = theme.spring,
-            status.render(ctx.data, state),
+            status.render(ctx, state.status),
         }),
     }
     if hovered then
