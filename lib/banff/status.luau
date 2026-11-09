@@ -17,23 +17,33 @@ local POWER_DEBOUNCE = 0.6
 local LABEL_GAP = 3
 local LABEL_STYLE = { font = theme.font, size = 13, weight = "medium" }
 
--- SVG path for a ring of `size` points filled to `value` (0–1) symmetrically from the top.
--- Returns nil for an empty ring.
-local function ringPath(size: number, stroke: number, value: number): string?
+local RING_SEGMENTS = 8
+
+-- SVG path for a ring of `size` points filled to `value` (0–1) symmetrically from the top. Always
+-- the same commands (a move and RING_SEGMENTS cubic curves), so a changing value morphs smoothly;
+-- SVG arcs become different numbers of curves and morphed into odd shapes. An empty ring collapses
+-- to a point at the top.
+local function ringPath(size: number, stroke: number, value: number): string
     local r = size / 2 - stroke / 2
     local c = size / 2
-    if value >= 0.999 then
-        return string.format("M%.2f %.2f A%.2f %.2f 0 1 1 %.2f %.2f A%.2f %.2f 0 1 1 %.2f %.2f",
-            c, c - r, r, r, c, c + r, r, r, c, c - r)
+    local reach = math.clamp(value, 0, 1) * math.pi
+    local step = 2 * reach / RING_SEGMENTS
+    local handle = 4 / 3 * math.tan(step / 4) * r
+    local function point(angle: number): (number, number)
+        return c + r * math.sin(angle), c - r * math.cos(angle)
     end
-    if value <= 0.005 then
-        return nil
+    local x, y = point(-reach)
+    local parts = { string.format("M%.3f %.3f", x, y) }
+    for index = 1, RING_SEGMENTS do
+        local from = -reach + (index - 1) * step
+        local to = from + step
+        local x0, y0 = point(from)
+        local x1, y1 = point(to)
+        parts[#parts + 1] = string.format("C%.3f %.3f %.3f %.3f %.3f %.3f",
+            x0 + handle * math.cos(from), y0 + handle * math.sin(from),
+            x1 - handle * math.cos(to), y1 - handle * math.sin(to), x1, y1)
     end
-    local reach = value * math.pi
-    local dx = r * math.sin(reach)
-    local y = c - r * math.cos(reach)
-    return string.format("M%.2f %.2f A%.2f %.2f 0 %d 1 %.2f %.2f",
-        c - dx, y, r, r, if reach > math.pi / 2 then 1 else 0, c + dx, y)
+    return table.concat(parts, " ")
 end
 
 -- Lit Wi-Fi arcs (0–3) from RSSI in dBm, using qs's 25/50/75 % band thresholds and its 4-point
@@ -123,14 +133,14 @@ local function microphoneIcon(mic): string
     return if mic.muted or (mic.volume or 0) <= 0.5 then "microphone-muted" else "microphone"
 end
 
-local function connectedCount(bluetooth): number
-    local count = 0
+local function connectedDevices(bluetooth): { [string]: boolean }
+    local connected = {}
     for _, device in (bluetooth and bluetooth.devices) or {} do
         if device.connected then
-            count += 1
+            connected[device.id] = true
         end
     end
-    return count
+    return connected
 end
 
 local function mediaKey(media): string?
@@ -140,9 +150,24 @@ local function mediaKey(media): string?
     return table.concat({ media.bundle or "", media.title or "", media.artist or "" }, "\0")
 end
 
--- Compares this render's data with the last and raises temporary states. The first call records a
--- baseline; power and Bluetooth also wait out a startup settle (qs BatterySource, BluetoothSource).
+-- Whether a reading changed between two renders. A reading that is missing on either side (a feed
+-- still loading) is not a change.
+local function changed(before, after): boolean
+    return before ~= nil and after ~= nil and before ~= after
+end
+
+-- Compares this render's data with the last and raises temporary states. Nothing is raised during
+-- the first SETTLE seconds, while feeds load (qs BatterySource and BluetoothSource settle the same
+-- way); readings keep updating meanwhile, so the first change after it counts.
 local function observe(data, s)
+    -- OmniWM lists Bluetooth devices only after macOS grants it Bluetooth access, and reading the
+    -- feed does not ask. Ask once, from a timer callback, since render must not issue commands.
+    if data.bluetooth and data.bluetooth.access == "notDetermined" and not s.askedBluetooth then
+        s.askedBluetooth = true
+        omniwm.after(0.01, function()
+            omniwm.run("bluetooth authorize")
+        end)
+    end
     local mic = data.microphone or {}
     local media = data.media
     local current = {
@@ -152,9 +177,9 @@ local function observe(data, s)
         micMuted = mic.muted,
         brightness = data.brightness and data.brightness.available and data.brightness.value or nil,
         mediaKey = mediaKey(media),
-        playing = media ~= nil and media.playing,
-        bluetooth = connectedCount(data.bluetooth),
-        ac = data.power ~= nil and data.power.source == "ac",
+        playing = if media then media.playing else nil,
+        devices = connectedDevices(data.bluetooth),
+        ac = if data.power then data.power.source == "ac" else nil,
     }
     local previous = s.previous
     s.previous = current
@@ -164,26 +189,32 @@ local function observe(data, s)
         end)
         return
     end
+    if not s.settled then
+        return
+    end
 
-    if current.volume ~= previous.volume or current.muted ~= previous.muted then
+    if changed(previous.volume, current.volume) or changed(previous.muted, current.muted) then
         showControl(s, "volume", volumeIcon(current.volume, current.muted))
     end
-    if current.micVolume ~= previous.micVolume or current.micMuted ~= previous.micMuted then
+    if changed(previous.micVolume, current.micVolume) or changed(previous.micMuted, current.micMuted) then
         showControl(s, "microphone", microphoneIcon(mic))
     end
-    if current.brightness ~= nil and previous.brightness ~= nil and current.brightness ~= previous.brightness then
+    if changed(previous.brightness, current.brightness) then
         showControl(s, "brightness", "brightness")
     end
-    if current.mediaKey ~= nil and (current.mediaKey ~= previous.mediaKey or current.playing ~= previous.playing) then
+    if current.mediaKey ~= nil and (current.mediaKey ~= previous.mediaKey or changed(previous.playing, current.playing)) then
         offer(s, "media", if current.playing then "play" else "pause")
     end
-    if s.settled and current.bluetooth > previous.bluetooth then
-        offer(s, "bluetooth", "bluetooth")
+    for id in current.devices do
+        if not previous.devices[id] then
+            offer(s, "bluetooth", "bluetooth")
+            break
+        end
     end
-    if current.ac ~= previous.ac then
+    if changed(previous.ac, current.ac) then
         if current.ac then
             arm(s, "powerTimer", POWER_DEBOUNCE, function()
-                if s.settled and s.previous and s.previous.ac then
+                if s.previous and s.previous.ac then
                     offer(s, "power", "zap")
                 end
             end)
@@ -309,24 +340,23 @@ local function render(ctx, s)
             w = ring,
             h = ring,
             viewBox = { 0, 0, ring, ring },
-            d = ringPath(ring, lineWidth, 1) :: string,
+            d = ringPath(ring, lineWidth, 1),
             border = theme.colors.statusTrack,
             borderWidth = lineWidth,
         }),
     }
-    local fill = if value then ringPath(ring, lineWidth, value) else nil
-    if fill then
-        circle[#circle + 1] = ui.path({
-            key = "fill",
-            w = ring,
-            h = ring,
-            viewBox = { 0, 0, ring, ring },
-            d = fill,
-            border = color,
-            borderWidth = lineWidth,
-            animate = theme.fade,
-        })
-    end
+    -- Always present so its path morphs between values; an empty ring is hidden, not removed.
+    circle[#circle + 1] = ui.path({
+        key = "fill",
+        w = ring,
+        h = ring,
+        viewBox = { 0, 0, ring, ring },
+        d = ringPath(ring, lineWidth, value or 0),
+        border = color or theme.colors.text,
+        borderWidth = lineWidth,
+        opacity = if value and value > 0.005 then 1 else 0,
+        animate = theme.fade,
+    })
 
     -- Keyed by icon so a change swaps glyphs: the old one fades and shrinks, the new one grows in.
     local icon = if s.slot then s.slot.icon else "wifi"

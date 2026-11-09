@@ -100,11 +100,12 @@ Every phase ends with a live check on the MacBook.
 
    On the Mac: the panel opens and closes (X, Escape, clock, outside press). It froze in 0.4.0, which re-measured every row each second; layout caching in 0.4.1 fixed that. Dismissing (×, row click, Clear all) reports "unavailable"; OmniWM's own Notifications widget fails the same way on this Mac, so it is an OmniWM limitation, accepted and not worked around. Phase 3 is otherwise done.
 4. **Status temporary states.** From `~/dotfiles/qs` `Status/StatusIndicator.qml`. One glyph slot, held by the highest-priority recent event; lower-priority events are dropped, not queued, and the slot falls back to Wi-Fi when its dwell ends:
-   - 4 Bluetooth device connected (`bluetooth` devices' connected count rises), 1.6 s, after a 3 s startup settle. Disconnects are silent.
+   - 4 Bluetooth device connected (a device id becomes connected), 1.6 s. Disconnects are silent. OmniWM lists devices only after macOS grants it Bluetooth access, and reading the feed does not ask, so Banff runs `bluetooth authorize` once (from a timer callback) while access is `notDetermined`.
    - 3 Power connected (`power.source` becomes `ac` and stays 600 ms), Lucide `zap`, 1.6 s, after the startup settle; unplugging clears it at once.
    - 2 Controls: output volume or mute (speaker with near/far waves, or speaker + ×), microphone volume or mute (`mic` / `micOff`), brightness (sun). 1.5 s. The control also takes the ring for its dwell, drawn in paper at that control's level (0 when muted), even when a higher-priority glyph holds the slot.
    - 1 Media play, pause or track change (`media.playing` or bundle/title/artist), play or pause glyph for the resulting state, 1.6 s.
-   - The first render records a baseline without events.
+   - No events during the first 3 s while feeds load (qs settles power and Bluetooth the same way; Banff settles everything). A reading missing on either side of a render is not a change. The 0.5.0 version popped the volume glyph on load.
+   - The ring fill is always drawn as a move plus eight cubic curves, so value changes morph cleanly. In 0.5.0 it used SVG arcs, which become different numbers of curves; the morph drew a white square-ish flicker on every volume change. An empty ring is hidden, not removed.
    - A glyph change swaps keyed glyphs: the old one fades and shrinks to 60 % in 150 ms, the new one grows in on the spring. qs's sideways slide for its own next/previous is dropped, because OmniWM does not say who changed the track.
    - At 20 % battery or less (qs `batteryPercentage: "low"`), the percentage sits to the right of the ring (13 pt Medium, 3 pt gap) except while a control holds the ring; the housing widens for it.
    - OmniWM does not watch the brightness keys (`context-data.mdx` "Brightness and system controls"), so the brightness state appears only after Banff's own brightness changes (phase 5). That also avoids qs's AutoBrightness ramp popping the circle.
