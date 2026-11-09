@@ -19,7 +19,7 @@ Status: phase 1 (resting housing) is written; it has not yet run on the Mac. The
 
 **Weather source.** macOS has no public weather API for local apps. WeatherKit requires a paid Apple Developer membership and an app signed with the WeatherKit entitlement. The closest thing to "from the system" is OmniWM's own feed, fetched by the signed host (from Open-Meteo upstream). NWS alerts are dropped because they would need our code to call `api.weather.gov`.
 
-**Weather settings surface.** OmniWM's Settings shows its weather location editor only for a bar widget or island component named `weather`, `calendar` or `control-center` (`ShellIslandInspectors.swift`, `ShellDesktopWidgetInspector.swift`). So the housing's weather is an island component, `widgets/weather/` (instance `weather` in `shell.toml`), which the root mounts with `ui.component`. Its Enabled switch hides the weather. Lake uses the same component name.
+**Weather settings surface.** OmniWM's Settings shows its weather location editor only for a bar widget or island component named `weather`, `calendar` or `control-center` (`ShellIslandInspectors.swift`, `ShellDesktopWidgetInspector.swift`). So the housing's weather is an island component, `widgets/weather/` (instance `weather` in `shell.toml`), which the root mounts with `ui.component`. Its Enabled switch hides the weather. Lake uses the same component name. The Island tab lists components only for a "composed" island, meaning the root has a `settings.toml` (`ShellDesktopEditor+Island.swift` `islandKind`); without one it shows "This island's content is defined by its style". `widgets/banff/settings.toml` therefore declares the root options.
 
 ## 2. Resting appearance (phase 1)
 
@@ -28,7 +28,7 @@ Measured from `~/dotfiles/qs` and a screenshot of the live bar.
 | Part | qs source | Banff |
 |---|---|---|
 | Housing | `ClockWidget.qml`: `Theme.surface` black, flush with the top edge, square top, round bottom, 27 pt tall, 6 pt end pads, 10 pt between parts; `ClockBar.qml` shadow black 0.45, offset 4 | `widgets/banff/init.luau`: a capsule plus a top-half box (`radius` is uniform), shadow on the capsule. With a camera notch the housing wraps it: weather and clock to the left, status to the right, height = notch height |
-| Clock | `HorizontalFace.qml`, `DigitTicker.qml`: IBM Plex Sans Medium 13, 12-hour `hh:mm`, no meridiem, leading hour zero in pencil `#AEB5B9`, digits roll 250 ms OutBack | `lib/banff/clock.luau`: fixed-width digit cells with clipped 0–9 strips (the pattern from Lake's `digits.luau`), spring `{0.25, 0.2}`. 12-hour is fixed for now |
+| Clock | `HorizontalFace.qml`, `DigitTicker.qml`: IBM Plex Sans Medium 13, 12-hour `hh:mm`, no meridiem, leading hour zero in pencil `#AEB5B9`, digits roll 250 ms OutBack | `lib/banff/clock.luau`: fixed-width digit cells with clipped 0–9 strips (the pattern from Lake's `digits.luau`), spring `{0.25, 0.2}`. 12-hour by default; the root's **24-hour clock** option switches it |
 | Date on hover | `MonthHeader.qml`: "Mon Nov 9 2026", 10 pt pencil, below the time | Hover grows the housing 18 pt and shows the date under the clock |
 | Weather | `WeatherCircle.qml`: 14 pt Lucide glyph, 5 pt gap, whole degrees without a unit; `WeatherService.glyphForCode` | `lib/banff/weather.luau` + `glyphs.luau`: the same Lucide paths and WMO-code mapping, with night variants from `weather.day`, drawn by the `weather` component. Hidden when the feed is off or the component is disabled; "–" when stale |
 | Status ring | `StatusIndicator.qml`, `StatusArc.qml`: 27 pt circle, 19 pt ring, 1.9 pt stroke, battery arc filling from 12 o'clock down both sides; paper, charging `#7E9C88` (UPower Charging or PendingCharge), ≤ 20 % `#7A2536`; Wi-Fi glyph with 25/50/75 % bands and 4-point hysteresis | `lib/banff/status.luau`: the same arc geometry as an SVG path. "On AC and not `power.charged`" stands in for PendingCharge, since macOS reports a battery held at its charge limit as not charging `[INFERENCE: what `charged` reports at the limit]`. RSSI mapped to quality as `2·(rssi+100)` %. OmniShell strokes with butt caps, so the Wi-Fi dot is a circle |
@@ -46,7 +46,7 @@ Not yet ported from rest: the 1.06 hover zoom (scaling about the centre would li
 | Status temporary states (`StatusIndicator.qml`) | Volume, mic, media and Bluetooth feeds drive the priority and dwell timers via `omniwm.after` | None known |
 | Control center | Grows out of the status circle. Toggles via `wifi`/`bluetooth`; audio via `outputs`/`volume`/`microphone`; brightness; hardware via `cpu/memory/gpu/disk/thermal`; power via `session …` | Wi-Fi scan/join and Bluetooth pairing open System Settings `[INFERENCE]`. Fans dropped |
 | Weather panel | `ctx.data.weather` `hours`/`days`; next-hour transitions from `hours[].rain` | No NWS alerts, no automatic location |
-| Settings | Root `settings.toml` (12/24-hour, weather on/off) shown in **Settings > Styles & Widgets > Island** | None |
+| Settings | Root `settings.toml`: **24-hour clock** so far, shown in **Settings > Styles & Widgets > Island**; weather on/off is the Weather component's Enabled switch | None |
 | Secure prompt, fan helper, launcher, workspaces | Dropped | Raycast; `pinentry-mac`; Touch ID `sudo` |
 
 ## 4. Repo layout

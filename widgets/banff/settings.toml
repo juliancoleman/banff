@@ -1,0 +1,7 @@
+# Root options. Declaring any root option also makes OmniWM's Island settings list the island's
+# components (including Weather and its location editor) instead of "defined by its style".
+
+[options.use24Hour]
+type = "boolean"
+title = "24-hour clock"
+default = false

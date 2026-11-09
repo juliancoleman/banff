@@ -30,7 +30,8 @@ local function time(ctx): (number?, number?)
     if hour == nil or minute == nil then
         return nil, nil
     end
-    return clock.parts(hour, minute, false)
+    local settings = ctx.data.settings
+    return clock.parts(hour, minute, settings ~= nil and settings.use24Hour == true)
 end
 
 local function dateText(ctx): string
