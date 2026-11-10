@@ -1,13 +1,11 @@
 -- The qs notification circle and panel (Notifications/NotificationCenter.qml, NotificationRow.qml),
 -- fed by OmniWM's read-only copy of Notification Center (ctx.data.notifications, Full Disk Access).
--- Docked in the housing, the circle sits between weather and the time: a 19 pt disc with a bell and a
--- count pill. Its panel opens under the time row; rows dismiss through Notification Center
--- (Accessibility). Focus/Do Not Disturb stays native: OmniWM exposes no Focus state.
+-- In the row, the circle sits between weather and the time: a disc (19 pt docked, 26 pt as a pill)
+-- with a bell and a count pill. Its panel opens under the time row; rows dismiss through Notification
+-- Center (Accessibility). Focus/Do Not Disturb stays native: OmniWM exposes no Focus state.
 
 local theme = require("./theme")
 
-local SLOT = 27 -- the circle's slot in the row (the housing's resting thickness)
-local FACE = 19
 local WIDTH = 298 -- panel width
 local LIST_MAX = 330
 local HEADER = 27
@@ -78,22 +76,23 @@ local function model(data): Model
     return result
 end
 
--- The circle: bell (or the newest app's icon for a moment after an arrival) and a count pill; an X
--- while the panel is open.
-local function badge(ctx, m: Model, open: boolean, media: boolean, onClick)
-    local face = { key = "face", w = FACE, h = FACE, radius = FACE / 2, fill = theme.colors.track }
+-- The circle at size set `z`: bell (or the newest app's icon for a moment after an arrival) and a
+-- count pill; an X while the panel is open.
+local function badge(ctx, m: Model, open: boolean, media: boolean, onClick, z)
+    local faceSize = z.badgeFace
+    local face = { key = "face", w = faceSize, h = faceSize, radius = faceSize / 2, fill = theme.colors.track }
     if open then
-        face[1] = glyph("close", CLOSE, 12, theme.colors.text)
+        face[1] = glyph("close", CLOSE, z.statusGlyph, theme.colors.text)
     elseif media and m.items[1] then
-        face[1] = ui.icon({ key = "media", app = m.items[1].bundle, w = FACE, h = FACE, radius = FACE / 2,
+        face[1] = ui.icon({ key = "media", app = m.items[1].bundle, w = faceSize, h = faceSize, radius = faceSize / 2,
             placeholder = "bell", appear = { opacity = 0, animate = theme.fade }, exit = { opacity = 0, animate = theme.fade } })
     else
-        face[1] = glyph("bell", BELL, 14, theme.colors.text)
+        face[1] = glyph("bell", BELL, z.bell, theme.colors.text)
     end
     local children = {
         key = "badge",
-        w = SLOT,
-        h = SLOT,
+        w = z.badge,
+        h = z.badge,
         cursor = "pointer",
         help = if m.count == 1 then "1 notification" else m.count .. " notifications",
         onClick = onClick,
@@ -436,7 +435,6 @@ local function track(state, m: Model): { string }
 end
 
 return {
-    SLOT = SLOT,
     WIDTH = WIDTH,
     model = model,
     badge = badge,

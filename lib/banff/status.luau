@@ -5,7 +5,8 @@
 --   4 Bluetooth device connected (1.6 s)    3 power connected (1.6 s, cleared on unplug)
 --   2 volume / microphone / brightness change (1.5 s; the ring shows that level meanwhile)
 --   1 media play, pause or track change (1.6 s)
--- At 20 % or less, the battery percentage sits to the right of the ring.
+-- The battery percentage shows at 20 % or less, or always (Banff's "Battery percentage" setting):
+-- beside the ring when docked, inside its bottom edge as a pill.
 
 local theme = require("./theme")
 local glyphs = require("./glyphs")
@@ -15,7 +16,6 @@ local DWELL = { bluetooth = 1.6, power = 1.6, control = 1.5, media = 1.6 }
 local SETTLE = 3 -- startup settle before power and Bluetooth events count
 local POWER_DEBOUNCE = 0.6
 local LABEL_GAP = 3
-local LABEL_STYLE = { font = theme.font, size = 13, weight = "medium" }
 
 local RING_SEGMENTS = 8
 
@@ -227,21 +227,20 @@ end
 
 -- Glyphs ----------------------------------------------------------------------------------------
 
-local function stroke(key: string, d: string, color: string)
-    local size = theme.statusGlyph
+local function stroke(key: string, d: string, color: string, size: number)
     return ui.path({ key = key, w = size, h = size, viewBox = { 0, 0, 24, 24 }, d = d, border = color,
         borderWidth = 2 * size / 24, animate = theme.fade })
 end
 
-local function wifiGlyph(wifi, level: number)
-    local size = theme.statusGlyph
+local function wifiGlyph(wifi, level: number, size: number)
     local k = size / 24
     local off = wifi == nil or not wifi.power
     local connected = wifi ~= nil and wifi.connected
     local children = {}
     for index, d in glyphs.wifiArcs do
         local lit = connected and not off and index <= level
-        children[#children + 1] = stroke("arc" .. index, d, if lit then theme.colors.text else theme.colors.statusDim)
+        children[#children + 1] = stroke("arc" .. index, d, if lit then theme.colors.text else theme.colors.statusDim,
+            size)
     end
     local dot = 2.4 * k
     children[#children + 1] = ui.box({
@@ -255,7 +254,7 @@ local function wifiGlyph(wifi, level: number)
         fill = if connected and not off then theme.colors.text else theme.colors.statusDim,
     })
     if off then
-        children[#children + 1] = stroke("slash", glyphs.slash, theme.colors.text)
+        children[#children + 1] = stroke("slash", glyphs.slash, theme.colors.text, size)
     end
     return children
 end
@@ -284,53 +283,62 @@ local function networkIcon(data): string?
     return "ethernet-off"
 end
 
--- The parts of a glyph, by icon name.
-local function glyphParts(icon: string, data, wifiBars: number)
+-- The parts of a glyph, by icon name, at `size` points.
+local function glyphParts(icon: string, data, wifiBars: number, size: number)
     local paths = glyphs.status
     local ink = theme.colors.text
+    local function line(key: string, d: string, color: string)
+        return stroke(key, d, color, size)
+    end
     if icon == "volume" or icon == "volume-muted" then
         local level = (data.volume or 0) / 100
-        local parts = { stroke("speaker", paths.speaker, ink) }
+        local parts = { line("speaker", paths.speaker, ink) }
         if icon == "volume-muted" then
-            parts[#parts + 1] = stroke("mute", paths.mute, ink)
+            parts[#parts + 1] = line("mute", paths.mute, ink)
         else
-            parts[#parts + 1] = stroke("near", paths.nearWave, if level > 0.005 then ink else theme.colors.statusDim)
-            parts[#parts + 1] = stroke("far", paths.farWave, if level >= 0.5 then ink else theme.colors.statusDim)
+            parts[#parts + 1] = line("near", paths.nearWave, if level > 0.005 then ink else theme.colors.statusDim)
+            parts[#parts + 1] = line("far", paths.farWave, if level >= 0.5 then ink else theme.colors.statusDim)
         end
         return parts
     elseif icon == "microphone" then
-        return { stroke("mic", paths.mic, ink) }
+        return { line("mic", paths.mic, ink) }
     elseif icon == "microphone-muted" then
-        return { stroke("mic", paths.micOff, ink) }
+        return { line("mic", paths.micOff, ink) }
     elseif icon == "brightness" then
-        return { stroke("sun", paths.sun, ink) }
+        return { line("sun", paths.sun, ink) }
     elseif icon == "zap" or icon == "bluetooth" or icon == "play" or icon == "pause" or icon == "close" then
-        return { stroke(icon, paths[icon], ink) }
+        return { line(icon, paths[icon], ink) }
     elseif icon == "ethernet" then
-        return { stroke("ethernet", paths.ethernet, ink) }
+        return { line("ethernet", paths.ethernet, ink) }
     elseif icon == "ethernet-off" then
-        return { stroke("ethernet", paths.ethernet, theme.colors.statusDim), stroke("slash", glyphs.slash, ink) }
+        return { line("ethernet", paths.ethernet, theme.colors.statusDim), line("slash", glyphs.slash, ink) }
     end
-    return wifiGlyph(data.wifi, wifiBars)
+    return wifiGlyph(data.wifi, wifiBars, size)
 end
 
 -- Rendering -------------------------------------------------------------------------------------
 
-local function batteryLabel(data, s): string?
+-- The battery percentage, when shown: at 20 % or less, or always with `always`; hidden while a
+-- control level or the close X holds the ring (qs StatusIndicator.labelShown).
+local function batteryLabel(data, s, always: boolean, closeAction: boolean?): string?
     local battery = data.battery
-    if s.control ~= nil or battery == nil or battery > 20 then
+    if closeAction or s.control ~= nil or battery == nil or (battery > 20 and not always) then
         return nil
     end
     return tostring(math.round(battery))
 end
 
--- Width of the status slot: the circle, plus the low-battery label beside it.
-local function width(ctx, s): number
-    local label = batteryLabel(ctx.data, s)
-    if label == nil then
-        return theme.status
+local function labelStyle(z)
+    return { font = theme.font, size = z.batteryLabel, weight = if z.name == "pill" then "semibold" else "medium" }
+end
+
+-- Width of the status slot at size set `z`: the circle, plus the battery label beside it when docked.
+local function width(ctx, s, z, always: boolean, closeAction: boolean?): number
+    local label = batteryLabel(ctx.data, s, always, closeAction)
+    if label == nil or z.name == "pill" then
+        return z.status
     end
-    return theme.status + LABEL_GAP + math.ceil((ctx.format.measure(label, LABEL_STYLE)))
+    return z.status + LABEL_GAP + math.ceil((ctx.format.measure(label, labelStyle(z))))
 end
 
 local function controlLevel(data, control: string): number
@@ -343,16 +351,16 @@ local function controlLevel(data, control: string): number
     return ((data.brightness and data.brightness.value) or 0) / 100
 end
 
--- The status slot. `s` is this display's status state (`ctx.state.status`). With `closeAction` (the
--- control center is open) the glyph is an X, as in qs.
-local function render(ctx, s, closeAction: boolean?)
+-- The status slot at size set `z`. `s` is this display's status state (`ctx.state.status`). With
+-- `closeAction` (the control center is open) the glyph is an X, as in qs.
+local function render(ctx, s, z, always: boolean, closeAction: boolean?)
     local data = ctx.data
     local wifi = data.wifi
     local bars = wifiLevel(wifi and wifi.rssi, s.wifiLevel)
     s.wifiLevel = bars
 
-    local ring = theme.status - 2 * theme.statusRoom
-    local lineWidth = theme.statusStroke
+    local ring = z.status - 2 * z.statusRoom
+    local lineWidth = z.statusStroke
     local value, color
     if s.control then
         value, color = controlLevel(data, s.control), theme.colors.text
@@ -361,8 +369,8 @@ local function render(ctx, s, closeAction: boolean?)
     end
     local circle = {
         key = "circle",
-        w = theme.status,
-        h = theme.status,
+        w = z.status,
+        h = z.status,
         align = "leading",
         ui.path({
             key = "track",
@@ -396,22 +404,40 @@ local function render(ctx, s, closeAction: boolean?)
     local icon = if closeAction then "close" elseif s.slot then s.slot.icon else s.network
     local glyph = {
         key = "glyph:" .. icon,
-        w = theme.statusGlyph,
-        h = theme.statusGlyph,
+        w = z.statusGlyph,
+        h = z.statusGlyph,
         appear = { opacity = 0, scale = 0.6, animate = theme.spring },
         exit = { opacity = 0, scale = 0.6, animate = { duration = 0.15, curve = "easeOut" } },
     }
-    for _, part in glyphParts(icon, data, bars) do
+    for _, part in glyphParts(icon, data, bars, z.statusGlyph) do
         glyph[#glyph + 1] = part
     end
     circle[#circle + 1] = ui.stack(glyph)
 
-    local slot = { key = "status", w = width(ctx, s), h = theme.status, gap = LABEL_GAP, ui.stack(circle) }
-    local label = batteryLabel(data, s)
-    if label then
-        slot[#slot + 1] = ui.text({ key = "battery", text = label, font = theme.font, size = 13, weight = "medium",
-            color = theme.colors.text, appear = { opacity = 0, animate = theme.fade },
-            exit = { opacity = 0, animate = theme.fade } })
+    local label = batteryLabel(data, s, always, closeAction)
+    local fade = { appear = { opacity = 0, animate = theme.fade }, exit = { opacity = 0, animate = theme.fade } }
+    if label and z.name == "pill" then
+        -- Inside the ring, its baseline on the ring's outer bottom edge (qs ringLabelSize, DemiBold).
+        circle[#circle + 1] = ui.row({
+            key = "battery",
+            w = z.status,
+            gap = 0,
+            align = "topLeading",
+            dy = z.status - z.statusRoom - z.batteryLabel * 1.025,
+            appear = fade.appear,
+            exit = fade.exit,
+            ui.box({ grow = 1, h = 1 }),
+            ui.text({ text = label, font = theme.font, size = z.batteryLabel, weight = "semibold",
+                color = theme.colors.text }),
+            ui.box({ grow = 1, h = 1 }),
+        })
+    end
+
+    local slot = { key = "status", w = width(ctx, s, z, always, closeAction), h = z.status, gap = LABEL_GAP,
+        ui.stack(circle) }
+    if label and z.name ~= "pill" then
+        slot[#slot + 1] = ui.text({ key = "battery", text = label, font = theme.font, size = z.batteryLabel,
+            weight = "medium", color = theme.colors.text, appear = fade.appear, exit = fade.exit })
     end
     return ui.row(slot)
 end

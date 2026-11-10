@@ -1,7 +1,7 @@
 -- Tokens from the live qs shell (~/dotfiles/qs qml/shell/Common/Theme.qml, pens/dark) and
--- ~/.config/qs/config.json (clock.duration 250, clock.springOvershoot 0.6). Values are for the
--- docked "notch" presentation at the top edge. Palette roles live in themes/banff.toml; the colours
--- here have no role.
+-- ~/.config/qs/config.json (clock.duration 250, clock.springOvershoot 0.6). Resting sizes for the
+-- notch and pill presentations are in `sizes`. Palette roles live in themes/banff.toml; the
+-- colours here have no role.
 
 return {
     font = "IBM Plex Sans",
@@ -25,30 +25,61 @@ return {
         danger = "#4C1722", -- bordeaux: armed power actions
     },
 
-    -- Housing (points)
-    height = 27, -- resting thickness: time box 20 + outer pad 3 + inner pad 4
-    pad = 6, -- housing end padding
-    gap = 10, -- between weather, clock and status (padX + 3)
     shadowRadius = 12,
     shadowOffset = { x = 0, y = 4 },
     panelPad = 12, -- gutter around an open panel
-
-    -- Clock
-    digitSize = 13,
-    digitBox = 20,
+    floatMargin = 8, -- pill mode: gap from the screen's top edge
+    cardRadius = 12, -- pill mode: corners of an open panel card
+    periodGap = 4, -- between the minutes and AM/PM
     dateSize = 10,
     dateRow = 18, -- extra housing height while hovering
 
-    -- Weather (compact)
-    weatherInset = 4,
-    weatherIcon = 14,
-    weatherIconGap = 5,
-
-    -- Status circle
-    status = 27,
-    statusRoom = 4,
-    statusStroke = 1.9,
-    statusGlyph = 12,
+    -- Resting sizes for each presentation (qs ClockWidget/HorizontalFace/StatusIndicator/
+    -- WeatherCircle/NotificationCenter with notchAmount 1 or 0). Notch: one housing flush with the
+    -- top edge, 27 pt thick (time box 20 + outer pad 3 + inner pad 4). Pill: separate capsules 34 pt
+    -- tall (time box 20 + padX 7 twice), 8 pt apart and 8 pt below the top edge.
+    sizes = {
+        notch = {
+            name = "notch",
+            height = 27,
+            digit = 13,
+            period = 13,
+            digitBox = 20,
+            pad = 6, -- housing end padding
+            gap = 10, -- between weather, clock and status (padX + 3)
+            weatherInset = 4,
+            weatherIcon = 14,
+            weatherIconGap = 5,
+            badge = 27,
+            badgeFace = 19,
+            bell = 14,
+            status = 27,
+            statusRoom = 4,
+            statusStroke = 1.9,
+            statusGlyph = 12,
+            batteryLabel = 13, -- beside the ring
+        },
+        pill = {
+            name = "pill",
+            height = 34,
+            digit = 15,
+            period = 10,
+            digitBox = 20,
+            pad = 10, -- clock capsule end padding
+            gap = 8, -- between capsules (statusGap)
+            weatherInset = 10,
+            weatherIcon = 17,
+            weatherIconGap = 5,
+            badge = 34,
+            badgeFace = 26,
+            bell = 17,
+            status = 34,
+            statusRoom = 3,
+            statusStroke = 1.4,
+            statusGlyph = 15,
+            batteryLabel = 9, -- inside the ring, on its bottom edge
+        },
+    },
 
     -- Motion: 250 ms with a light OutBack overshoot (0.6)
     spring = { response = 0.25, bounce = 0.15 },

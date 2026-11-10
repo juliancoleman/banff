@@ -46,7 +46,7 @@ Not yet ported from rest: the 1.06 hover zoom (scaling about the centre would li
 | Status temporary states (`StatusIndicator.qml`) | Phase 4, below | Wired network is inferred, not reported |
 | Control center | Phase 5, below | No Wi-Fi/Bluetooth power, join or pair; no input-device switching; no fans |
 | Weather panel | Phase 6, below | No NWS alerts, wind warnings or air quality; 7 days, not 10; no precipitation notices |
-| Settings | Root `settings.toml`: **24-hour clock** so far, shown in **Settings > Styles & Widgets > Island**; weather on/off is the Weather component's Enabled switch | None |
+| Settings | Phase 7, below | Weather notices and display settings stay with macOS; no light theme |
 | Secure prompt, fan helper, launcher, workspaces | Dropped | Raycast; `pinentry-mac`; Touch ID `sudo` |
 
 ## 4. Repo layout
@@ -58,6 +58,7 @@ banff/
   README.md
   themes/banff.toml       # pens palette roles
   fonts/                  # IBM Plex Sans + OFL
+  strings/en.toml         # labels for Island setting choices
   lib/banff/              # theme, glyphs, clock, status, weather, calendar, notifications, control, forecast
   widgets/banff/init.luau # island root
   scripts/check           # luau-lsp analysis against omniwm.d.luau
@@ -137,7 +138,14 @@ Every phase ends with a live check on the MacBook.
 
    Code: `lib/banff/forecast.luau` (`panel`), weather glyphs in `lib/banff/glyphs.luau`, the slot in `widgets/banff/init.luau`.
 
-7. **Settings schema.**
+7. **Settings schema.** Root options in `widgets/banff/settings.toml`, shown in **Settings > Styles & Widgets > Island**, with choice labels in `strings/en.toml`. The user picked the qs settings that still mean something here; weather notices come from the Weather app, display settings cannot be managed from the bar, and a light theme is not wanted.
+   - **Housing**: Notch (default, the user's qs setting) or Pill (qs `clock.presentation`). Pill follows qs `notchAmount` 0: weather, notifications, clock and status become separate black capsules 34 pt tall, 8 pt apart and 8 pt below the top edge (beside the notch on a notched display), with qs's pill sizes: 15 pt digits, 10 pt AM/PM, a 17 pt weather glyph inset 10, a 26 pt notification disc, a status ring with 3 pt room and a 1.4 pt stroke around a 15 pt glyph. An open panel grows its own capsule into a card with 12 pt corners: notifications and weather extend left from the capsule's right edge, the control center right from its left edge, and the calendar and hovered date widen the clock capsule around its centre while the neighbours move aside (qs places them from the clock's edges). The weather capsule yields while notifications show. Differences from qs: the capsule's X stays in the card's top row with the panel's own header below it (qs merges the two rows), and cards are clamped inside the island envelope, which grew to 800 pt wide so they rarely need it.
+   - **Shadow** (qs `bar.shadow`): on by default; the housing, capsules and cards drop the black 45 % shadow, or none.
+   - **24-hour clock** (qs `clock.hourCycle`): as before.
+   - **AM / PM** (qs `clock.meridiem`): off by default, as in the user's qs. In 12-hour time it adds "AM"/"PM" in pencil Medium (13 pt docked, 10 pt pill) 4 pt after the minutes, on the digits' baseline; the A/P rolls like a digit and the M is fixed. Ignored in 24-hour time (OmniWM cannot hide the toggle there).
+   - **Battery percentage** (qs `status.batteryPercentage`): "20% and below" (default) or "Always". Docked, the percentage sits beside the ring (13 pt Medium); as a pill, inside the ring on its bottom edge (9 pt SemiBold). Hidden while a volume, microphone or brightness level or the close X holds the ring.
+
+   Code: `options` and `renderNotch`/`renderPill` in `widgets/banff/init.luau`; size sets in `theme.sizes`, passed to `clock`, `weather` (the component gets the presentation in its view props), `notifications.badge` and `status`.
 
 ## 6. Risks
 

@@ -6,7 +6,7 @@ trailing = []
 [island]
 root = "banff"
 displays = "main"
-width = 440
+width = 800
 height = 560
 fullscreen = "hide"
 

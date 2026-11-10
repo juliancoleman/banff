@@ -1,12 +1,15 @@
--- Compact weather from the qs notch (Weather/WeatherCircle.qml): a Lucide glyph and whole degrees
--- without a unit, from OmniWM's weather feed. Shared by the weather component (which draws it) and
--- the island root (which reserves its width). While the feed has nothing to show, an enabled
--- component draws a dimmed cloud and "–", with the reason in its tooltip.
+-- Compact weather from the qs clock bar (Weather/WeatherCircle.qml): a Lucide glyph and whole
+-- degrees without a unit, from OmniWM's weather feed, at a presentation's size set (theme.sizes).
+-- Shared by the weather component (which draws it) and the island root (which reserves its width).
+-- While the feed has nothing to show, an enabled component draws a dimmed cloud and "–", with the
+-- reason in its tooltip.
 
 local theme = require("./theme")
 local glyphs = require("./glyphs")
 
-local TEXT = { font = theme.font, size = theme.digitSize, weight = "medium" }
+local function textStyle(z)
+    return { font = theme.font, size = z.digit, weight = "medium" }
+end
 
 type Summary = { text: string, glyph: string, help: string, ready: boolean }
 
@@ -30,14 +33,13 @@ local function summary(w): Summary
 end
 
 -- Width of the compact view in points.
-local function width(ctx): number
-    local textWidth = math.ceil((ctx.format.measure(summary(ctx.data.weather).text, TEXT)))
-    return 2 * theme.weatherInset + theme.weatherIcon + theme.weatherIconGap + textWidth
+local function width(ctx, z): number
+    local textWidth = math.ceil((ctx.format.measure(summary(ctx.data.weather).text, textStyle(z))))
+    return 2 * z.weatherInset + z.weatherIcon + z.weatherIconGap + textWidth
 end
 
--- A weather glyph (with its dots) at `size` points; the compact view uses theme.weatherIcon.
-local function icon(name: string, color: string, requested: number?)
-    local size = requested or theme.weatherIcon
+-- A weather glyph (with its dots) at `size` points.
+local function icon(name: string, color: string, size: number)
     local k = size / 24
     local children = {
         key = "icon",
@@ -69,21 +71,20 @@ local function icon(name: string, color: string, requested: number?)
     return ui.stack(children)
 end
 
-local function render(ctx, height: number)
+local function render(ctx, height: number, z)
     local s = summary(ctx.data.weather)
     local color = if s.ready then theme.colors.text else theme.colors.textSecondary
-    local inset = theme.weatherInset
+    local inset = z.weatherInset
     return ui.row({
         key = "weather",
-        w = width(ctx),
+        w = width(ctx, z),
         h = height,
         gap = 0,
         help = s.help,
         ui.box({ w = inset, h = 1 }),
-        icon(s.glyph, color),
-        ui.box({ w = theme.weatherIconGap, h = 1 }),
-        ui.text({ key = "temp", text = s.text, font = theme.font, size = theme.digitSize, weight = "medium",
-            color = color }),
+        icon(s.glyph, color, z.weatherIcon),
+        ui.box({ w = z.weatherIconGap, h = 1 }),
+        ui.text({ key = "temp", text = s.text, font = theme.font, size = z.digit, weight = "medium", color = color }),
         ui.box({ w = inset, h = 1 }),
     })
 end

@@ -29,6 +29,7 @@ The style puts nothing on the Workspace Bar.
 
 - **Settings > Styles & Widgets**: choose **Banff**, then **Use Style**. Open **Island** and turn on **Show Dynamic Island**. Turn the Workspace Bar off.
 - Weather location: **Settings > Styles & Widgets > Island**, select the **Weather** component, and set the city or coordinates and units in its location editor. Its **Enabled** switch shows or hides the weather.
+- Banff's own options are on the same **Island** page: **Housing** (Notch, flush with the top edge, or Pill, separate capsules floating just below it), **Shadow**, **24-hour clock**, **AM / PM** (12-hour only) and **Battery percentage** (20% and below, or Always).
 
 - IBM Plex Sans ships in `fonts/`; restart OmniWM once after installing so it loads.
 
