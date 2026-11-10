@@ -147,6 +147,7 @@ Every phase ends with a live check on the MacBook.
    - **24-hour clock** (qs `clock.hourCycle`): as before.
    - **AM / PM** (qs `clock.meridiem`): off by default, as in the user's qs. In 12-hour time it adds "AM"/"PM" in pencil (13 pt docked, 10 pt pill) 4 pt after the minutes, on the digits' baseline; the A/P rolls like a digit and the M is fixed. Ignored in 24-hour time (OmniWM cannot hide the toggle there).
    - **Battery percentage** (qs `status.batteryPercentage`): "20% and below" (default) or "Always". Docked, the percentage sits beside the ring (13 pt); as a pill, inside the ring on its bottom edge (9 pt, one weight step heavier). Hidden while a volume, microphone or brightness level or the close X holds the ring.
+   - **OmniWM animation speed** (no qs equivalent): OmniWM divides every style animation by its Animation speed setting, the same multiplier as window tiling, so at the user's 2× Banff's 250 ms ran in 125 ms. A style cannot read that setting, so this number option (1 by default, 0.25–4) restates it and Banff multiplies its durations to match (`theme.scaleMotion`), keeping the island at 250 ms.
 
    Code: `options` and `renderNotch`/`renderPill` in `widgets/banff/init.luau`; size sets in `theme.sizes`, passed to `clock`, `weather` (the component gets the presentation in its view props), `notifications.badge` and `status`.
 
