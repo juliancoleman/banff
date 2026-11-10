@@ -328,16 +328,38 @@ local function hangFor(ctx, panel: string?, notes, peekItem)
     return nil, 0, 0
 end
 
-local function placeHang(hang, w: number, h: number, dx: number, dy: number)
+-- Places what hangs under the row. `align` pins it to the edge its housing or card grows from, so on
+-- close it stays put and fades while the shape shrinks around it, instead of riding the moving
+-- origin out of the panel.
+local function placeHang(hang, w: number, h: number, align: string, dx: number, dy: number)
     hang.w = w
     hang.h = h
-    hang.align = "topLeading"
+    hang.align = align
     hang.dx = dx
     hang.dy = dy
     hang.animate = theme.spring
     hang.appear = { opacity = 0, animate = theme.spring }
     hang.exit = { opacity = 0, animate = theme.exit }
     return ui.stack(hang)
+end
+
+-- A stack the size of its housing or card that clips its children to that box (as qs clips the
+-- housing), so content leaving on close cannot spill past the shrinking shape. The shape's fill
+-- and shadow stay outside it.
+local function clipped(w: number, h: number, children: { any })
+    local spec = {
+        key = "inside",
+        w = w,
+        h = h,
+        align = "topLeading",
+        animate = theme.spring,
+        ui.path({ key = "clip", w = w, h = h, viewBox = { 0, 0, 1, 1 }, d = "M0 0 H1 V1 H0 Z", mask = true,
+            animate = theme.spring }),
+    }
+    for _, child in children do
+        spec[#spec + 1] = child
+    end
+    return ui.stack(spec)
 end
 
 -- Notch: one housing flush with the top edge ------------------------------------------------------
@@ -421,16 +443,20 @@ local function renderNotch(ctx, o: Options, f)
         surface("body", width, housingHeight, radius, o),
         -- Squares the top corners against the screen edge.
         ui.box({ key = "top", w = width, h = radius, align = "top", fill = theme.colors.surface, animate = theme.spring }),
+    }
+    local inside = {
         ui.row(left),
         ui.stack({ key = "statusPlace", w = rightWidth, h = height, align = "topLeading", dx = rightStart - x, dy = 0,
             animate = theme.spring, statusSlot(ctx, z, o, rightWidth, height, panel == "control") }),
     }
     if f.hovered then
-        housing[#housing + 1] = dateRow(ctx, width, height - 1)
+        inside[#inside + 1] = dateRow(ctx, width, height - 1)
     end
     if f.hang then
-        housing[#housing + 1] = placeHang(f.hang, hangWidth, hangHeight, centre - hangWidth / 2 - x, height)
+        -- Centred on the notch (or screen) centre, offset from the housing's own centre.
+        inside[#inside + 1] = placeHang(f.hang, hangWidth, hangHeight, "top", centre - (x + width / 2), height)
     end
+    housing[#housing + 1] = clipped(width, housingHeight, inside)
     return ui.stack(housing)
 end
 
@@ -514,7 +540,9 @@ local function renderPill(ctx, o: Options, f)
             cardX = if anchor == "right" then px + pw - cardW elseif anchor == "left" then px else px + (pw - cardW) / 2
             cardX = math.clamp(cardX, 0, math.max(0, envelopeWidth - cardW))
             extra = if f.hang
-                then placeHang(f.hang, f.hangWidth, f.hangHeight, (cardW - f.hangWidth) / 2, h)
+                then placeHang(f.hang, f.hangWidth, f.hangHeight,
+                    if anchor == "right" then "topTrailing" elseif anchor == "left" then "topLeading" else "top",
+                    if anchor == "right" then -theme.panelPad elseif anchor == "left" then theme.panelPad else 0, h)
                 else dateRow(ctx, cardW, h - 1)
         end
         local spec = handlers or {}
@@ -533,11 +561,12 @@ local function renderPill(ctx, o: Options, f)
         spec.appear = { opacity = 0, scale = 0.8, animate = theme.spring }
         spec.exit = { opacity = 0, scale = 0.8, animate = theme.fade }
         spec[#spec + 1] = surface("body", cardW, cardH, radius, o)
-        spec[#spec + 1] = ui.stack({ key = "content", w = pw, h = h, align = "topLeading", dx = px - cardX, dy = 0,
-            animate = theme.spring, content })
+        local inside = { ui.stack({ key = "content", w = pw, h = h, align = "topLeading", dx = px - cardX, dy = 0,
+            animate = theme.spring, content }) }
         if extra then
-            spec[#spec + 1] = extra
+            inside[#inside + 1] = extra
         end
+        spec[#spec + 1] = clipped(cardW, cardH, inside)
         return ui.stack(spec)
     end
 
