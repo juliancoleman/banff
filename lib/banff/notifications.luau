@@ -105,7 +105,7 @@ local function badge(ctx, m: Model, open: boolean, media: boolean, onClick, z)
         children[#children + 1] = ui.stack({
             key = "pill",
             h = 13,
-            w = math.max(13, textWidth(ctx, text, 9, "semibold") + 6),
+            w = math.max(13, textWidth(ctx, text, 9, theme.faceStrong) + 6),
             radius = 6.5,
             align = "topTrailing",
             dx = -1,
@@ -113,7 +113,8 @@ local function badge(ctx, m: Model, open: boolean, media: boolean, onClick, z)
             fill = theme.colors.today,
             appear = { opacity = 0, animate = theme.fade },
             exit = { opacity = 0, animate = theme.fade },
-            ui.text({ text = text, font = theme.font, size = 9, weight = "semibold", color = theme.colors.todayInk }),
+            ui.text({ text = text, font = theme.font, size = 9, weight = theme.faceStrong,
+                color = theme.colors.todayInk }),
         })
     end
     return ui.stack(children)

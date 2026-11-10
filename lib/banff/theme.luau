@@ -5,6 +5,10 @@
 
 return {
     font = "IBM Plex Sans",
+    -- Resting row text (time, AM/PM, temperature, battery percentage, date, notification count):
+    -- one step lighter than qs's Medium/DemiBold, at the user's request.
+    faceWeight = "regular",
+    faceStrong = "medium",
 
     colors = {
         surface = "#000000",

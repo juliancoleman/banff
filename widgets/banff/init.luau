@@ -270,8 +270,8 @@ local function timeElement(ctx, z, m, hour: number?, minute: number?, meridiem: 
     if hour ~= nil and minute ~= nil then
         return clock.render(hour, minute, m, z, meridiem)
     end
-    return ui.text({ key = "time", text = ctx.data.clock, font = theme.font, size = z.digit, weight = "medium",
-        color = theme.colors.text })
+    return ui.text({ key = "time", text = ctx.data.clock, font = theme.font, size = z.digit,
+        weight = theme.faceWeight, color = theme.colors.text })
 end
 
 -- The hovered date, centred across `w` (a row with growing spacers on both sides; a plain box lays
@@ -288,7 +288,7 @@ local function dateRow(ctx, w: number, dy: number)
         appear = { opacity = 0, dy = -4, animate = theme.spring },
         exit = { opacity = 0, animate = theme.fade },
         ui.box({ grow = 1, h = 1 }),
-        ui.text({ text = dateText(ctx), font = theme.font, size = theme.dateSize, weight = "medium",
+        ui.text({ text = dateText(ctx), font = theme.font, size = theme.dateSize, weight = theme.faceWeight,
             color = theme.colors.textSecondary }),
         ui.box({ grow = 1, h = 1 }),
     })
@@ -625,7 +625,7 @@ function render(ctx)
         hangHeight = hangHeight,
         dateWidth = if hovered
             then math.ceil((ctx.format.measure(dateText(ctx), { font = theme.font, size = theme.dateSize,
-                weight = "medium" })))
+                weight = theme.faceWeight })))
             else 0,
         metrics = function(z)
             state.metrics[z.name] = state.metrics[z.name] or clock.metrics(ctx, z)

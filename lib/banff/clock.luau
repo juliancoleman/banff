@@ -23,20 +23,20 @@ end
 
 -- Cell widths for size set `z`: digit, colon, the A/P cell and the trailing M.
 local function metrics(ctx, z)
-    local style = { font = theme.font, size = z.digit, weight = "medium" }
+    local style = { font = theme.font, size = z.digit, weight = theme.faceWeight }
     local digit = 0
     for value = 0, 9 do
         digit = math.max(digit, (ctx.format.measure(tostring(value), style)))
     end
     local colon = ctx.format.measure(":", style)
-    local periodStyle = { font = theme.font, size = z.period, weight = "medium" }
+    local periodStyle = { font = theme.font, size = z.period, weight = theme.faceWeight }
     local letter = math.max((ctx.format.measure("A", periodStyle)), (ctx.format.measure("P", periodStyle)))
     local m = ctx.format.measure("M", periodStyle)
     return { digit = math.ceil(digit), colon = math.ceil(colon), letter = math.ceil(letter), m = math.ceil(m) + 1 }
 end
 
 local function label(text: string, size: number, color: string)
-    return ui.text({ text = text, font = theme.font, size = size, weight = "medium", color = color })
+    return ui.text({ text = text, font = theme.font, size = size, weight = theme.faceWeight, color = color })
 end
 
 -- One rolling cell: a clipped column of `symbols` offset to `index` (0-based).

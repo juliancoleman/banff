@@ -329,7 +329,8 @@ local function batteryLabel(data, s, always: boolean, closeAction: boolean?): st
 end
 
 local function labelStyle(z)
-    return { font = theme.font, size = z.batteryLabel, weight = if z.name == "pill" then "semibold" else "medium" }
+    return { font = theme.font, size = z.batteryLabel,
+        weight = if z.name == "pill" then theme.faceStrong else theme.faceWeight }
 end
 
 -- Width of the status slot at size set `z`: the circle, plus the battery label beside it when docked.
@@ -427,7 +428,7 @@ local function render(ctx, s, z, always: boolean, closeAction: boolean?)
             appear = fade.appear,
             exit = fade.exit,
             ui.box({ grow = 1, h = 1 }),
-            ui.text({ text = label, font = theme.font, size = z.batteryLabel, weight = "semibold",
+            ui.text({ text = label, font = theme.font, size = z.batteryLabel, weight = theme.faceStrong,
                 color = theme.colors.text }),
             ui.box({ grow = 1, h = 1 }),
         })
@@ -437,7 +438,7 @@ local function render(ctx, s, z, always: boolean, closeAction: boolean?)
         ui.stack(circle) }
     if label and z.name ~= "pill" then
         slot[#slot + 1] = ui.text({ key = "battery", text = label, font = theme.font, size = z.batteryLabel,
-            weight = "medium", color = theme.colors.text, appear = fade.appear, exit = fade.exit })
+            weight = theme.faceWeight, color = theme.colors.text, appear = fade.appear, exit = fade.exit })
     end
     return ui.row(slot)
 end

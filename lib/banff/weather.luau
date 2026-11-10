@@ -8,7 +8,7 @@ local theme = require("./theme")
 local glyphs = require("./glyphs")
 
 local function textStyle(z)
-    return { font = theme.font, size = z.digit, weight = "medium" }
+    return { font = theme.font, size = z.digit, weight = theme.faceWeight }
 end
 
 type Summary = { text: string, glyph: string, help: string, ready: boolean }
@@ -84,7 +84,8 @@ local function render(ctx, height: number, z)
         ui.box({ w = inset, h = 1 }),
         icon(s.glyph, color, z.weatherIcon),
         ui.box({ w = z.weatherIconGap, h = 1 }),
-        ui.text({ key = "temp", text = s.text, font = theme.font, size = z.digit, weight = "medium", color = color }),
+        ui.text({ key = "temp", text = s.text, font = theme.font, size = z.digit, weight = theme.faceWeight,
+            color = color }),
         ui.box({ w = inset, h = 1 }),
     })
 end
