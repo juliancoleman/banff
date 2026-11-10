@@ -3,8 +3,9 @@
 -- top edge, square on top and rounded below. On a display with a camera notch the housing wraps the
 -- notch, with weather, notifications and clock to its left and status to its right. Hover reveals
 -- the date. Weather is the "weather" island component, so its location is edited in OmniWM's Island
--- settings. One panel opens inside the housing at a time: the month calendar (press on the housing)
--- or notifications (press on the notification circle). A new notification peeks under the row.
+-- settings. One panel opens inside the housing at a time: the month calendar (press on the housing),
+-- notifications (the notification circle), the control center (the status circle) or the forecast
+-- (the weather). A new notification peeks under the row.
 
 local calendar = require("../lib/banff/calendar")
 local clock = require("../lib/banff/clock")
