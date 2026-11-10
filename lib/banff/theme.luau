@@ -3,7 +3,7 @@
 -- notch and pill presentations are in `sizes`. Palette roles live in themes/banff.toml; the
 -- colours here have no role.
 
-return {
+local theme = {
     font = "IBM Plex Sans",
     -- Resting row text (time, AM/PM, temperature, battery percentage, date, notification count):
     -- one step lighter than qs's Medium/DemiBold, at the user's request.
@@ -86,9 +86,24 @@ return {
     },
 
     -- Motion: qs's 250 ms OutBack with overshoot 0.6 (clock.duration, clock.springOvershoot) as a
-    -- cubic Bézier, within 0.002 of Qt's curve. Springs settled faster than 250 ms felt snappy.
+    -- cubic Bézier, within 0.002 of Qt's curve. Durations are rescaled by `scaleMotion`.
     spring = { duration = 0.25, curve = { 0.32, 1.137, 0.609, 1.017 } },
     roll = { duration = 0.25, curve = { 0.32, 1.137, 0.609, 1.017 } },
     fade = { duration = 0.25, curve = "easeInOut" },
     exit = { duration = 0.25, curve = "easeOut" },
 }
+
+local MOTION = 0.25 -- seconds, qs Theme.motionDuration
+
+-- OmniWM divides every style animation by its Animation speed setting (also the tiling speed), so
+-- Banff multiplies its durations by the speed the user reports in the "OmniWM animation speed"
+-- option, keeping the island at qs's 250 ms whatever the windows use. The motion tables are shared
+-- by every module, so updating them in place before a render retimes everything built in it.
+function theme.scaleMotion(speed: number?)
+    local seconds = MOTION * math.clamp(speed or 1, 0.25, 4)
+    for _, motion in { theme.spring, theme.roll, theme.fade, theme.exit } do
+        motion.duration = seconds
+    end
+end
+
+return theme

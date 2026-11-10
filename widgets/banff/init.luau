@@ -613,6 +613,8 @@ function render(ctx)
     end
     local state = ctx.state
     local o = options(ctx)
+    local settings = ctx.data.settings
+    theme.scaleMotion(if settings and type(settings.animationSpeed) == "number" then settings.animationSpeed else 1)
     state.metrics = state.metrics or {}
     state.status = state.status or {}
     status.observe(ctx.data, state.status)

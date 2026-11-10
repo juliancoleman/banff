@@ -28,3 +28,11 @@ type = "choice"
 title = "Battery percentage"
 default = "low"
 choices = ["low", "always"]
+
+[options.animationSpeed]
+type = "number"
+title = "OmniWM animation speed"
+default = 1
+min = 0.25
+max = 4
+step = 0.25
