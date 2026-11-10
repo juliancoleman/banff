@@ -408,7 +408,7 @@ local function render(ctx, s, z, always: boolean, closeAction: boolean?)
         w = z.statusGlyph,
         h = z.statusGlyph,
         appear = { opacity = 0, scale = 0.6, animate = theme.spring },
-        exit = { opacity = 0, scale = 0.6, animate = { duration = 0.15, curve = "easeOut" } },
+        exit = { opacity = 0, scale = 0.6, animate = theme.exit },
     }
     for _, part in glyphParts(icon, data, bars, z.statusGlyph) do
         glyph[#glyph + 1] = part

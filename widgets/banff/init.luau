@@ -336,7 +336,7 @@ local function placeHang(hang, w: number, h: number, dx: number, dy: number)
     hang.dy = dy
     hang.animate = theme.spring
     hang.appear = { opacity = 0, animate = theme.spring }
-    hang.exit = { opacity = 0, animate = { duration = 0.12, curve = "easeOut" } }
+    hang.exit = { opacity = 0, animate = theme.exit }
     return ui.stack(hang)
 end
 

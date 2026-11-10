@@ -85,8 +85,10 @@ return {
         },
     },
 
-    -- Motion: 250 ms with a light OutBack overshoot (0.6)
-    spring = { response = 0.25, bounce = 0.15 },
-    roll = { response = 0.25, bounce = 0.2 },
+    -- Motion: qs's 250 ms OutBack with overshoot 0.6 (clock.duration, clock.springOvershoot) as a
+    -- cubic Bézier, within 0.002 of Qt's curve. Springs settled faster than 250 ms felt snappy.
+    spring = { duration = 0.25, curve = { 0.32, 1.137, 0.609, 1.017 } },
+    roll = { duration = 0.25, curve = { 0.32, 1.137, 0.609, 1.017 } },
     fade = { duration = 0.25, curve = "easeInOut" },
+    exit = { duration = 0.25, curve = "easeOut" },
 }
