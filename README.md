@@ -21,6 +21,8 @@ On a display with a camera notch, the housing wraps the notch, with weather, not
 
 Clicking the status circle opens the control center: battery and a power menu (lock, sleep, restart, shut down), Wi-Fi and Bluetooth tiles (which open their System Settings pages), volume, microphone and brightness sliders, an output-device list, and memory, CPU and disk meters.
 
+Clicking the weather opens the forecast: the place, the temperature with today's condition and range, a 24-hour temperature trace with rain chances and sunrise/sunset, and seven days of ranges on a shared scale. It comes from OmniWM's weather feed, so set a location for the Weather component in **Settings > Styles & Widgets > Island**.
+
 The style puts nothing on the Workspace Bar.
 
 ## Controls and commands

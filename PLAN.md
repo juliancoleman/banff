@@ -45,7 +45,7 @@ Not yet ported from rest: the 1.06 hover zoom (scaling about the centre would li
 | Notifications circle + panel | Phase 3, below | macOS still draws its own banners |
 | Status temporary states (`StatusIndicator.qml`) | Phase 4, below | Wired network is inferred, not reported |
 | Control center | Phase 5, below | No Wi-Fi/Bluetooth power, join or pair; no input-device switching; no fans |
-| Weather panel | `ctx.data.weather` `hours`/`days`; next-hour transitions from `hours[].rain` | No NWS alerts, no automatic location |
+| Weather panel | Phase 6, below | No NWS alerts, wind warnings or air quality; 7 days, not 10; no precipitation notices |
 | Settings | Root `settings.toml`: **24-hour clock** so far, shown in **Settings > Styles & Widgets > Island**; weather on/off is the Weather component's Enabled switch | None |
 | Secure prompt, fan helper, launcher, workspaces | Dropped | Raycast; `pinentry-mac`; Touch ID `sudo` |
 
@@ -58,7 +58,7 @@ banff/
   README.md
   themes/banff.toml       # pens palette roles
   fonts/                  # IBM Plex Sans + OFL
-  lib/banff/              # theme, glyphs, clock, status
+  lib/banff/              # theme, glyphs, clock, status, weather, calendar, notifications, control, forecast
   widgets/banff/init.luau # island root
   scripts/check           # luau-lsp analysis against omniwm.d.luau
 ```
@@ -126,7 +126,17 @@ Every phase ends with a live check on the MacBook.
    - Not ported, because OmniWM has no way to do them: Wi-Fi and Bluetooth power, network list and join, Bluetooth pairing (`context-data.mdx`: power switches use the settings handoffs), the input-device page, the display page (refresh rates), fans, and Ethernet. OmniWM reads CPU and GPU temperatures from the SMC (`ctx.data.thermal`), but no fan speeds; qs's usage tile shows no temperatures, so neither does Banff yet.
 
    Code: `lib/banff/control.luau`, wired into `widgets/banff/init.luau` (`state.panel = "control"`, `state.controlPage`, `state.armed`).
-6. **Weather panel.**
+
+6. **Weather panel.** From `~/dotfiles/qs` `Weather/WeatherCircle.qml`, `WeatherPanel.qml`, `WeatherBody.qml`, `HourlyTrace.qml`, fed by `ctx.data.weather` (Open-Meteo through OmniWM: current reading, 24 hours from the current hour, 7 days):
+   - A press on the weather slot toggles it (only when the feed has a reading); while it is open the slot shows an X. It replaces the other panels and closes like them. The island envelope grew from 440 to 560 pt tall to fit it.
+   - 290 pt wide. Place row (27 pt): the place in 12 pt pencil.
+   - Hero: the temperature in 40 pt Light (`IBMPlexSans-Light.otf`, new in 0.7.0), then the condition with its glyph and "High · Low" in pencil. Like qs, the hero keeps the last temperature when the feed is stale; the compact weather blanks.
+   - "Next 24 hours": qs's trace, 90 pt plus a 20 pt sun row. Temperature polyline (paper, 2 pt) over 5° or 10° gridlines, rain bars where the chance is at least 10 %, a blue-grey Now tick, values and times every 4 hours ("Now" first; times follow Banff's 24-hour setting), and sunrise/sunset as vertical rules plus a row of glyphs and times. The feed gives today's sunrise and sunset only; tomorrow's are estimated as today's plus 24 h, which is a minute or two off.
+   - "7-day forecast": an axis in 8 pt, then a row per day: name (Today, then the feed's weekday), glyph (raised 4 pt with the chance beneath in blue-grey when it is at least 20 %), low, a range bar with end ticks on the shared axis, high, and on today's row a blue-grey tick at the current temperature. qs titles this "10-day forecast"; the feed has 7 days, so the caption counts them.
+   - Not ported: NWS alerts, the wind row (it shows only under NWS wind alerts), air quality, the stale "Not updated" notes, and qs `WeatherAlerts` precipitation notices ("Rain expected around 4 PM"), because OmniShell cannot post macOS notifications.
+
+   Code: `lib/banff/forecast.luau` (`panel`), weather glyphs in `lib/banff/glyphs.luau`, the slot in `widgets/banff/init.luau`.
+
 7. **Settings schema.**
 
 ## 6. Risks

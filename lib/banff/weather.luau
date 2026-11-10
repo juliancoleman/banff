@@ -35,8 +35,9 @@ local function width(ctx): number
     return 2 * theme.weatherInset + theme.weatherIcon + theme.weatherIconGap + textWidth
 end
 
-local function icon(name: string, color: string)
-    local size = theme.weatherIcon
+-- A weather glyph (with its dots) at `size` points; the compact view uses theme.weatherIcon.
+local function icon(name: string, color: string, requested: number?)
+    local size = requested or theme.weatherIcon
     local k = size / 24
     local children = {
         key = "icon",
@@ -87,4 +88,4 @@ local function render(ctx, height: number)
     })
 end
 
-return { width = width, render = render }
+return { width = width, render = render, icon = icon }

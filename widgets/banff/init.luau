@@ -9,6 +9,7 @@
 local calendar = require("../lib/banff/calendar")
 local clock = require("../lib/banff/clock")
 local control = require("../lib/banff/control")
+local forecast = require("../lib/banff/forecast")
 local notifications = require("../lib/banff/notifications")
 local status = require("../lib/banff/status")
 local theme = require("../lib/banff/theme")
@@ -161,6 +162,20 @@ local function toggleControl(ctx)
     state.controlPage, state.controlDirection, state.armed = nil, 0, nil
 end
 
+-- The weather slot toggles the forecast, when the feed has one.
+local function toggleWeather(ctx)
+    local state = ctx.state
+    if state.panel == "weather" then
+        state.panel = nil
+        return
+    end
+    local w = ctx.data.weather
+    if w ~= nil and w.access == "ok" then
+        state.panel = "weather"
+        state.peek = nil
+    end
+end
+
 local function shiftMonth(ctx, delta: number)
     local state = ctx.state
     if state.panel ~= "calendar" then
@@ -237,6 +252,15 @@ function render(ctx)
         local element, panelHeight = control.panel(ctx)
         hangElement = element
         hangWidth, hangHeight = control.WIDTH, panelHeight
+    elseif panel == "weather" then
+        local element, panelHeight = forecast.panel(ctx)
+        if element then
+            hangElement = element
+            hangWidth, hangHeight = forecast.WIDTH, panelHeight
+        else
+            panel = nil
+            state.panel = nil
+        end
     elseif peekItem then
         local element, rowHeight = notifications.peek(ctx, notes, peekItem)
         hangElement = element
@@ -260,7 +284,14 @@ function render(ctx)
     local left = { key = "left", h = height, gap = 0, align = "topLeading", dx = leftStart - x, dy = 0,
         animate = theme.spring }
     if weatherWidth then
-        left[#left + 1] = ui.component({ key = WEATHER, id = WEATHER, view = "compact", w = weatherWidth, h = height })
+        -- The component draws the compact weather; while the forecast is open the slot shows an X.
+        local content = if panel == "weather"
+            then ui.stack({ key = "close", w = 16, h = 16,
+                ui.path({ key = "x", w = 12, h = 12, viewBox = { 0, 0, 24, 24 }, d = "M18 6 L6 18 M6 6 L18 18",
+                    border = theme.colors.text, borderWidth = 1 }) })
+            else ui.component({ key = WEATHER, id = WEATHER, view = "compact", w = weatherWidth, h = height })
+        left[#left + 1] = ui.stack({ key = "weatherSlot", w = weatherWidth, h = height, cursor = "pointer",
+            help = if panel == "weather" then "Close weather" else nil, onClick = toggleWeather, content })
     end
     if badgeWidth then
         left[#left + 1] = notifications.badge(ctx, notes, panel == "notifications", state.media == true,
@@ -374,6 +405,8 @@ function render(ctx)
         hang = { key = "notificationsPanel", hangElement }
     elseif panel == "control" then
         hang = { key = "controlPanel", hangElement }
+    elseif panel == "weather" then
+        hang = { key = "weatherPanel", hangElement }
     elseif peekItem then
         hang = {
             key = "peekPanel",
