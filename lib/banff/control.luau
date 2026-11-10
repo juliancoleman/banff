@@ -1,11 +1,11 @@
 -- The qs control center (Control/ControlCenter.qml and its tiles and pages), docked under the time
 -- row and opened from the status circle. 298 pt wide: a header (battery, power), then Wi-Fi and
 -- Bluetooth tiles, volume / microphone / brightness sliders, and memory / CPU / disk meters, with
--- rules between groups. Pages slide in from the right: Bluetooth devices, audio output, power.
+-- rules between groups. Pages slide in from the right: audio output and power.
 --
--- OmniWM limits what it can do: Wi-Fi and Bluetooth have no power switches or join/pair commands
--- (only `wifi settings` / `bluetooth settings`), there is no input-device switching and no fan data,
--- so those tiles open System Settings and the fan tile is gone.
+-- Wi-Fi and Bluetooth hand off to System Settings: OmniWM has no power switches, join or pair
+-- commands for them (only `wifi settings` / `bluetooth settings`), and Settings already lists
+-- networks, devices and batteries. There is also no input-device switching and no fan data.
 
 local theme = require("./theme")
 local glyphs = require("./glyphs")
@@ -175,10 +175,12 @@ local function bluetoothSummary(bluetooth): (boolean, string)
     return true, "On"
 end
 
-local function bluetoothTile(data, width: number, onOpen)
-    local on, subtitle = bluetoothSummary(data.bluetooth)
+-- Like Wi-Fi, Bluetooth hands off to System Settings, which lists devices with their batteries.
+local function bluetoothTile(data, width: number)
+    local bluetooth = data.bluetooth
+    local on, subtitle = bluetoothSummary(bluetooth)
     return tile("bluetooth", width, knob("knob", on, nil, single("bluetooth", paths.bluetooth)), "Bluetooth", subtitle,
-        onOpen, true)
+        if bluetooth and bluetooth.access == "notDetermined" then "bluetooth authorize" else "bluetooth settings", true)
 end
 
 -- A slider row (Control/SliderTile.qml): knob (mute where supported), a 2 pt track with quarter
@@ -287,17 +289,11 @@ end
 
 -- Rows ------------------------------------------------------------------------------------------
 
--- A list row (Control/ListRow.qml): 16 pt glyph (or a ringed one), title, subtitle, trailing check.
-local function listRow(key: string, parts, level: number?, title: string, subtitle: string?, current: boolean, onClick)
+-- A list row (Control/ListRow.qml): 16 pt glyph, title, optional subtitle, trailing check.
+local function listRow(key: string, parts, title: string, subtitle: string?, current: boolean, onClick)
     local ink = if current then theme.colors.today else theme.colors.text
-    local glyphSlot = { key = "glyph", w = 24, h = 24, align = "leading", dx = 10 - 4 }
-    if level then
-        glyphSlot[#glyphSlot + 1] = ui.path({ key = "track", w = 24, h = 24, viewBox = { 0, 0, 24, 24 },
-            d = status.ringPath(24, 2, 1), border = theme.colors.statusTrack, borderWidth = 2 })
-        glyphSlot[#glyphSlot + 1] = ui.path({ key = "level", w = 24, h = 24, viewBox = { 0, 0, 24, 24 },
-            d = status.ringPath(24, 2, level), border = theme.colors.text, borderWidth = 2 })
-    end
-    for _, part in parts(if level then 11 else 16, ink) do
+    local glyphSlot = { key = "glyph", w = 16, h = 16, align = "leading", dx = 10 }
+    for _, part in parts(16, ink) do
         glyphSlot[#glyphSlot + 1] = part
     end
     local column = { key = "text", gap = 1, center = false, align = "leading", dx = 40,
@@ -384,7 +380,7 @@ local function home(ctx)
     local rows = {
         { ui.row({ key = "links", w = WIDTH, h = ROW, gap = GAP, wifiTile(data, half),
             ui.box({ key = "divider", w = 1, h = KNOB, fill = theme.colors.rule }),
-            bluetoothTile(data, half, toPage("bluetooth")) }), ROW },
+            bluetoothTile(data, half) }), ROW },
         { rule("rule1"), 1 },
     }
     local faders = sliders(data, if data.outputs and #data.outputs > 0 then toPage("output") else nil)
@@ -400,33 +396,11 @@ local function home(ctx)
     return stack(rows)
 end
 
-local function bluetoothPage(ctx)
-    local bluetooth = ctx.data.bluetooth
-    local on, subtitle = bluetoothSummary(bluetooth)
-    local devices = {}
-    for _, device in (bluetooth and bluetooth.devices) or {} do
-        local level = if device.battery then device.battery / 100 else nil
-        local detail = if device.connected
-            then (if device.battery then "Connected · " .. math.round(device.battery) .. "%" else "Connected")
-            else "Paired"
-        devices[#devices + 1] = listRow("d:" .. device.id, single("kind", glyphs.devices[device.kind] or paths.bluetooth),
-            level, device.name, detail, device.connected, "bluetooth settings")
-    end
-    local listElement, listHeight = list("devices", devices, "No devices")
-    return stack({
-        { tile("bluetoothRow", WIDTH, knob("knob", on, nil, single("bluetooth", paths.bluetooth)), "Bluetooth", subtitle,
-            if bluetooth and bluetooth.access == "notDetermined" then "bluetooth authorize" else "bluetooth settings",
-            true), ROW },
-        { rule("rule"), 1 },
-        { listElement, listHeight },
-    })
-end
-
 local function outputPage(ctx)
     local data = ctx.data
     local rows = {}
     for _, output in data.outputs or {} do
-        rows[#rows + 1] = listRow("o:" .. output.id, volumeParts(1, false), nil, output.name, nil, output.default,
+        rows[#rows + 1] = listRow("o:" .. output.id, volumeParts(1, false), output.name, nil, output.default,
             "volume output " .. output.id)
     end
     local listElement, listHeight = list("outputs", rows, "No output devices")
@@ -473,16 +447,14 @@ local function powerPage(ctx)
     })
 end
 
-local TITLES = { bluetooth = "Bluetooth", output = "Output", power = "Power" }
+local TITLES = { output = "Output", power = "Power" }
 
 -- The open panel and its height. Presses on its gutter are absorbed so they do not reach the housing.
 local function panel(ctx)
     local state = ctx.state
     local page = state.controlPage
     local body, bodyHeight
-    if page == "bluetooth" then
-        body, bodyHeight = bluetoothPage(ctx)
-    elseif page == "output" then
+    if page == "output" then
         body, bodyHeight = outputPage(ctx)
     elseif page == "power" then
         body, bodyHeight = powerPage(ctx)

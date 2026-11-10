@@ -19,7 +19,7 @@ Draws a Dynamic Island on the main display. The island is one black housing flus
 
 On a display with a camera notch, the housing wraps the notch, with weather, notifications and clock on its left and status on its right. Hovering the housing shows the date. Clicking it opens a month calendar inside the housing: ‹ › or Left/Right change the month, and Escape, a click outside or another click on the housing closes it. Clicking the notification circle opens the notification list instead: click a row to dismiss it and open its app, × to dismiss it, or Clear all. A new notification briefly peeks under the clock. Notifications need OmniWM to have Full Disk Access (to read them) and Accessibility (to dismiss them).
 
-Clicking the status circle opens the control center: battery and a power menu (lock, sleep, restart, shut down), Wi-Fi and Bluetooth tiles (which open System Settings and a device list), volume, microphone and brightness sliders, an output-device list, and memory, CPU and disk meters.
+Clicking the status circle opens the control center: battery and a power menu (lock, sleep, restart, shut down), Wi-Fi and Bluetooth tiles (which open their System Settings pages), volume, microphone and brightness sliders, an output-device list, and memory, CPU and disk meters.
 
 The style puts nothing on the Workspace Bar.
 
