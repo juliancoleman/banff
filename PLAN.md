@@ -43,7 +43,7 @@ Not yet ported from rest: the 1.06 hover zoom (scaling about the centre would li
 |---|---|---|
 | Calendar (`Clock/MonthGrid.qml`, `MonthHeader.qml`, `MonthArrow.qml`) | Phase 2, below | None known |
 | Notifications circle + panel | Phase 3, below | macOS still draws its own banners |
-| Status temporary states (`StatusIndicator.qml`) | Phase 4, below | No wired-network glyph (OmniWM reports Wi-Fi only) |
+| Status temporary states (`StatusIndicator.qml`) | Phase 4, below | Wired network is inferred, not reported |
 | Control center | Phase 5, below | No Wi-Fi/Bluetooth power, join or pair; no input-device switching; no fans |
 | Weather panel | `ctx.data.weather` `hours`/`days`; next-hour transitions from `hours[].rain` | No NWS alerts, no automatic location |
 | Settings | Root `settings.toml`: **24-hour clock** so far, shown in **Settings > Styles & Widgets > Island**; weather on/off is the Weather component's Enabled switch | None |
@@ -109,6 +109,7 @@ Every phase ends with a live check on the MacBook.
    - A glyph change swaps keyed glyphs: the old one fades and shrinks to 60 % in 150 ms, the new one grows in on the spring. qs's sideways slide for its own next/previous is dropped, because OmniWM does not say who changed the track.
    - At 20 % battery or less (qs `batteryPercentage: "low"`), the percentage sits to the right of the ring (13 pt Medium, 3 pt gap) except while a control holds the ring; the housing widens for it.
    - OmniWM does not watch the brightness keys (`context-data.mdx` "Brightness and system controls"), so the brightness state appears only after Banff's own brightness changes (phase 5). That also avoids qs's AutoBrightness ramp popping the circle.
+   - Resting glyph follows qs `NetworkSource`: Wi-Fi when connected, Ethernet when wired, a slashed Ethernet when offline. OmniWM reports Wi-Fi only, so "wired" means Wi-Fi is not connected but `networkHistory` shows traffic in the last 30 s. With Wi-Fi connected the glyph stays Wi-Fi even if a cable is plugged in. Before 0.6.2 a wired Mac showed a dim Wi-Fi glyph.
 
    Code: `lib/banff/status.luau` (`observe`, `width`, `render`, state in `ctx.state.status`), paths in `lib/banff/glyphs.luau`.
 5. **Control center.** From `~/dotfiles/qs` `Control/ControlCenter.qml`, `ToggleTile`, `SliderTile`, `UsageTile`, `ListRow`, `BluetoothPage`, `AudioPage`, `PowerPage`, and `Status/Knob.qml`:

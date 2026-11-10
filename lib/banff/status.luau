@@ -260,6 +260,28 @@ local function wifiGlyph(wifi, level: number)
     return children
 end
 
+-- The resting glyph, after qs NetworkSource (`wired ? "ethernet" : wifi ? "wifi" : "ethernet-off"`).
+-- OmniWM reports Wi-Fi but no wired link, so a wired connection is inferred: Wi-Fi is not
+-- connected, yet traffic moved in the last 30 s (`networkHistory`). With Wi-Fi connected the
+-- glyph stays Wi-Fi even if a cable is also plugged in, since Banff cannot tell.
+local function networkIcon(data): string
+    local wifi = data.wifi
+    if wifi and wifi.connected then
+        return "wifi"
+    end
+    local history = data.networkHistory
+    if history then
+        for _, series in { history.down, history.up } do
+            for _, sample in series do
+                if sample > 0 then
+                    return "ethernet"
+                end
+            end
+        end
+    end
+    return "ethernet-off"
+end
+
 -- The parts of a glyph, by icon name.
 local function glyphParts(icon: string, data, wifiBars: number)
     local paths = glyphs.status
@@ -282,6 +304,10 @@ local function glyphParts(icon: string, data, wifiBars: number)
         return { stroke("sun", paths.sun, ink) }
     elseif icon == "zap" or icon == "bluetooth" or icon == "play" or icon == "pause" or icon == "close" then
         return { stroke(icon, paths[icon], ink) }
+    elseif icon == "ethernet" then
+        return { stroke("ethernet", paths.ethernet, ink) }
+    elseif icon == "ethernet-off" then
+        return { stroke("ethernet", paths.ethernet, theme.colors.statusDim), stroke("slash", glyphs.slash, ink) }
     end
     return wifiGlyph(data.wifi, wifiBars)
 end
@@ -361,7 +387,7 @@ local function render(ctx, s, closeAction: boolean?)
     })
 
     -- Keyed by icon so a change swaps glyphs: the old one fades and shrinks, the new one grows in.
-    local icon = if closeAction then "close" elseif s.slot then s.slot.icon else "wifi"
+    local icon = if closeAction then "close" elseif s.slot then s.slot.icon else networkIcon(data)
     local glyph = {
         key = "glyph:" .. icon,
         w = theme.statusGlyph,
