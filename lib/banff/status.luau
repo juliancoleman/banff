@@ -263,19 +263,21 @@ end
 -- The resting glyph, after qs NetworkSource (`wired ? "ethernet" : wifi ? "wifi" : "ethernet-off"`).
 -- OmniWM reports Wi-Fi but no wired link, so a wired connection is inferred: Wi-Fi is not
 -- connected, yet traffic moved in the last 30 s (`networkHistory`). With Wi-Fi connected the
--- glyph stays Wi-Fi even if a cable is also plugged in, since Banff cannot tell.
-local function networkIcon(data): string
+-- glyph stays Wi-Fi even if a cable is also plugged in, since Banff cannot tell. Returns nil while
+-- the traffic history has no samples yet (it restarts whenever no widget has been reading it).
+local function networkIcon(data): string?
     local wifi = data.wifi
     if wifi and wifi.connected then
         return "wifi"
     end
     local history = data.networkHistory
-    if history then
-        for _, series in { history.down, history.up } do
-            for _, sample in series do
-                if sample > 0 then
-                    return "ethernet"
-                end
+    if history == nil or (#history.down == 0 and #history.up == 0) then
+        return nil
+    end
+    for _, series in { history.down, history.up } do
+        for _, sample in series do
+            if sample > 0 then
+                return "ethernet"
             end
         end
     end
@@ -386,8 +388,12 @@ local function render(ctx, s, closeAction: boolean?)
         opacity = if value and value > 0.005 then 1 else 0,
     })
 
+    -- The network glyph is worked out every render, even while another glyph shows, so its feeds stay
+    -- demanded and closing the control center does not flash a stale or empty reading; until the
+    -- first reading the last known glyph stays.
+    s.network = networkIcon(data) or s.network or "ethernet-off"
     -- Keyed by icon so a change swaps glyphs: the old one fades and shrinks, the new one grows in.
-    local icon = if closeAction then "close" elseif s.slot then s.slot.icon else networkIcon(data)
+    local icon = if closeAction then "close" elseif s.slot then s.slot.icon else s.network
     local glyph = {
         key = "glyph:" .. icon,
         w = theme.statusGlyph,
